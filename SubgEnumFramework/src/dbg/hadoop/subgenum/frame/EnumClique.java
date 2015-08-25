@@ -79,7 +79,7 @@ public class EnumClique {
 		}
 		
 		//if(isCountOnly){
-			Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
+			//Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
 			Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
 		//}
 		//else {
@@ -233,7 +233,7 @@ class CliqueCountDriver extends Configured implements Tool{
 		job.setCombinerClass(CliqueCountReducer.class);
 		job.setReducerClass(CliqueCountReducer.class);
 		
-		job.setNumReduceTasks(numReducers);
+		job.setNumReduceTasks(1);
 		
 		FileInputFormat.setInputPaths(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
@@ -272,7 +272,7 @@ class CliqueCountReducer extends
 		for(LongWritable val : values){
 			sum += val.get();
 		}
-		System.out.println("# " + context.getConfiguration().get("clique.number.vertices") 
+		log.info("# " + context.getConfiguration().get("clique.number.vertices") 
 				+ "-clique: " + sum);
 		context.write(NullWritable.get(), new LongWritable(sum));
 	}
