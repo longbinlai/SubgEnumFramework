@@ -9,10 +9,11 @@ public class InputInfo {
 	public String separator = "space";
 	public String jarFile = "run.jar";
 	public String workDir = "";
-	public String cliqueSize = "3";
+	public String cliqueNumVertices = "3";
 	public long elemSize = 0;
 	public int bfType = Config.EDGE;
 	public int maxSize = 0;
+	public int cliqueSizeThresh = 0;
 	public float falsePositive = (float) 0.001;
 	public boolean isUndirected = false;
 	public boolean enableBF = false;
@@ -78,10 +79,16 @@ public class InputInfo {
 					enableBF = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
-			else if (args[i].contains("clique.size")) {
+			else if (args[i].contains("clique.number.vertices")) {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
-					cliqueSize = args[i].substring(valuePos);
+					cliqueNumVertices = args[i].substring(valuePos);
+				}
+			}
+			else if(args[i].contains("mapred.clique.size.threshold")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					cliqueSizeThresh = Integer.valueOf(args[i].substring(valuePos));
 				}
 			}
 			else if (args[i].contains("is.hypergraph")){

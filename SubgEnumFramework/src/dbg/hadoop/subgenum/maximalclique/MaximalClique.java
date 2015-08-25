@@ -9,63 +9,26 @@ import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Utility;
+import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class MaximalClique{
+	private static InputInfo inputInfo = null;
 	public static void main(String[] args) throws Exception{
-		String inputFilePath = "";
-		double falsePositive = 0.001;
-		boolean enableBF = true;
-		int cliqueSizeThresh = 20;
+		inputInfo = new InputInfo(args);
+		String inputFilePath = inputInfo.inputFilePath;
+		double falsePositive = inputInfo.falsePositive;
+		boolean enableBF = inputInfo.enableBF;
+		int cliqueSizeThresh = inputInfo.cliqueSizeThresh;
 		
-		String jarFile = "";
-		String numReducers = "";
-	
-		int valuePos = 0;
-		for (int i = 0; i < args.length; ++i) {
-			if (args[i].contains("mapred.reduce.tasks")) {
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					numReducers = args[i].substring(valuePos);
-				}
-			}
-			else if(args[i].contains("mapred.input.file")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					inputFilePath = args[i].substring(valuePos);
-				}
-			}
-			else if(args[i].contains("mapred.clique.size.threshold")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					cliqueSizeThresh = Integer.valueOf(args[i].substring(valuePos));
-				}
-			}
-			else if (args[i].contains("bloom.filter.false.positive.rate")) {
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					falsePositive = Double.parseDouble(args[i].substring(valuePos));
-				}
-			} 
-			else if (args[i].contains("enable.bloom.filter")) {
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					enableBF = Boolean.parseBoolean(args[i].substring(valuePos));
-				}
-			}
-			else if(args[i].contains("jar.file.name")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					jarFile = args[i].substring(valuePos);
-				}
-			}
-		}
+		String jarFile = inputInfo.jarFile;
+		String numReducers = inputInfo.numReducers;
+		String workDir = inputInfo.workDir;
 		
 		if(inputFilePath.isEmpty()){
 			System.err.println("Input file not specified!");
 			System.exit(-1);;
 		}
 		
-		String workDir = Utility.getWorkDir(inputFilePath);
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
@@ -107,5 +70,9 @@ public class MaximalClique{
 		
 		String opt4[] = { s3Output, s4Output, numReducers, jarFile};
 		ToolRunner.run(conf, new MCliqueS4Driver(), opt4);
+		
+		Utility.getFS().delete(new Path(s1Output));
+		Utility.getFS().delete(new Path(s2Output));
+		Utility.getFS().delete(new Path(s3Output));
 	}
 }
