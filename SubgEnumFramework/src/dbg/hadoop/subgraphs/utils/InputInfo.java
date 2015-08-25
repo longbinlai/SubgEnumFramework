@@ -1,0 +1,103 @@
+package dbg.hadoop.subgraphs.utils;
+
+import dbg.hadoop.subgraphs.utils.Utility;
+
+public class InputInfo {
+	public String numReducers = "1";
+	public String inputFilePath = "";
+	public String FileName = "";
+	public String separator = "space";
+	public String jarFile = "run.jar";
+	public String workDir = "";
+	public String cliqueSize = "3";
+	public long elemSize = 0;
+	public int bfType = Config.EDGE;
+	public int maxSize = 0;
+	public float falsePositive = (float) 0.001;
+	public boolean isUndirected = false;
+	public boolean enableBF = false;
+	public boolean isHyper = false;
+	
+	public InputInfo(String[] args){
+		int valuePos = 0;
+		for (int i = 0; i < args.length; ++i) {
+			System.out.println("args[" + i + "] = " + args[i]);
+			if (args[i].contains("mapred.reduce.tasks")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					numReducers = args[i].substring(valuePos);
+				}
+			}
+			else if(args[i].contains("mapred.input.file")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					inputFilePath = args[i].substring(valuePos);
+				}
+				workDir = Utility.getWorkDir(inputFilePath);
+				FileName = Utility.getFileName(inputFilePath);
+			}
+			else if(args[i].contains("graph.undirected")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isUndirected = Boolean.valueOf(args[i].substring(valuePos));
+				}
+			}
+			else if(args[i].contains("mapred.input.key.value.separator")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					separator = args[i].substring(valuePos);
+				}
+			}
+			else if(args[i].contains("jar.file.name")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					jarFile = args[i].substring(valuePos);
+				}
+			}
+			else if (args[i].contains("bloom.filter.false.positive.rate")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					falsePositive = Float.parseFloat(args[i].substring(valuePos));
+				}
+			} 
+			else if (args[i].contains("bloom.filter.element.size")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					elemSize = Long.parseLong(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("bloom.filter.type")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					bfType = Integer.parseInt(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enable.bloom.filter")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					enableBF = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("clique.size")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					cliqueSize = args[i].substring(valuePos);
+				}
+			}
+			else if (args[i].contains("is.hypergraph")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isHyper = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if(args[i].contains("map.input.max.size")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					maxSize = Integer.valueOf(args[i].substring(valuePos));
+				}
+			}
+		}
+	}
+	public InputInfo(){}
+
+}
