@@ -51,10 +51,7 @@ public class FourClique{
 		String jarFile = inputInfo.jarFile;
 		String numReducers = inputInfo.numReducers;
 		String workDir = inputInfo.workDir;
-		//String type = "LH";
-		//int graphSize = 0;
-		//double _k = 2.0;
-		//int largeDegreeThresh = 0;
+
 		if(inputFilePath.isEmpty()){
 			System.err.println("Input file not specified!");
 			System.exit(-1);;
@@ -80,8 +77,8 @@ public class FourClique{
 					.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
-		String adjListDir = isHyper ? workDir + Config.hyperGraphAdjList + "." + maxSize :
-				workDir + Config.adjListDir + "." + maxSize;
+		String adjListDir = isHyper ? workDir + Config.hyperGraphAdjList + ".0" :
+				workDir + Config.adjListDir + ".0";
 		
 		// The parameters: <inputDir> <outputDir> <numReducers> <jarFile>
 		String opts[] = {adjListDir, stageOneOutput, numReducers, jarFile};		

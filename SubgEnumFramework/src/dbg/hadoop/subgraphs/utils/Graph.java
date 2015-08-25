@@ -3,6 +3,7 @@ package dbg.hadoop.subgraphs.utils;
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
+import gnu.trove.map.hash.TLongLongHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedWriter;
@@ -19,9 +20,10 @@ import java.util.PriorityQueue;
 import java.util.Random;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.log4j.Logger;
 
 public class Graph{
-	
+	private static Logger log = Logger.getLogger(Graph.class);
 	private long unorientedSize=0;
 	private long orientedSize=0;
 
@@ -110,7 +112,6 @@ public class Graph{
 		TLongIterator it = l.iterator();		
 
 		int [] indexes = new int[cliqueSize-1];
-		
 		long a;
 		while(it.hasNext()){
 			a=it.next();
@@ -160,6 +161,89 @@ public class Graph{
 
 		return countRunning;
 	}
+	
+	/**
+	   * Output the clique instance rather than just count.
+	   * The clique has curV as the minimum vertex, and when 
+	   * finding k-clique, we simply find (k-1)-clique around curV's neighbors.
+	   */
+	  public long[] enumCliqueOfSize(int cliqueSize, long curV, TLongLongHashMap cliqueMap){
+	    CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize);
+	    TLongArrayList l = this.getNodeList();
+	    TLongArrayList neighbors = null;
+
+	    TLongIterator it = l.iterator();
+	    int[] indexes = new int[cliqueSize - 1];
+	    long[] curClique = new long[cliqueSize];
+	    long a = 0L;
+	    long countRunning = 0L;
+	    
+	    boolean addingLargeClique = false;
+	    long curVertexClique = -1;
+	    if(cliqueMap != null){
+	      if(cliqueMap.containsKey(curV)){
+	        curVertexClique = cliqueMap.get(curV);
+	        addingLargeClique = true;
+	      }
+	    }
+	   
+	    log.info("Start enumerating " + cliqueSize + "-clique");
+
+	    while (it.hasNext()) {
+	      a = it.next();
+	      curClique[0] = a;
+	      if(addingLargeClique) {
+	        addingLargeClique = (cliqueMap.get(a) == curVertexClique);
+	      }
+	      neighbors = this.getLargerNeighbors(a);
+	      if (neighbors.size() >= cliqueSize - 1) {
+	        indexes[0] = 0;
+	        int fixing = 0;
+	        boolean failure = false;
+	        while (fixing >= 0) {
+	          while (!failure) {
+	            while (!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
+	              indexes[fixing] += 1;
+	              if (!(indexes[fixing] < (neighbors.size() - (indexes.length - fixing - 1)))) {
+	                failure = true;
+	              }
+	            }
+	            if (!failure) {
+	              if (fixing + 1 < indexes.length) {
+	                fixing += 1;
+	                indexes[fixing] = indexes[fixing - 1] + 1;
+	              } else {
+	                countRunning += 1;
+	                if (countRunning > 1 && countRunning % 1000000 == 1) {
+	                  log.info("Current clique count: " + countRunning);
+	                }
+	                for(int i = 1; i < cliqueSize; ++i){
+	                  curClique[i] = neighbors.get(indexes[i - 1]);
+	                  if(addingLargeClique) addingLargeClique = (cliqueMap.get(curClique[i]) == curVertexClique);
+	                }
+	                if(addingLargeClique){
+	                  encoder.addCliqueVertex(curClique);
+	                }
+	                else{
+	                  encoder.addNormalVertices(curClique);
+	                }
+	                indexes[fixing] += 1;
+	              }
+	              if (!(indexes[fixing] < (neighbors.size() - (indexes.length - fixing - 1)))) {
+	                failure = true;
+	              }
+	            }
+	          }
+	          fixing -= 1;
+	          if (fixing >= 0) {
+	            indexes[fixing] += 1;
+	            failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length - fixing - 1))));
+	          }
+	        }
+	      }
+	    }
+	    return encoder.getEncodedCliques();
+	  }
 
 
 	public long countTriangles () {

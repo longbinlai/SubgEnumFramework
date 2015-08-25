@@ -16,7 +16,7 @@ public class MaximalClique{
 	public static void main(String[] args) throws Exception{
 		inputInfo = new InputInfo(args);
 		String inputFilePath = inputInfo.inputFilePath;
-		double falsePositive = inputInfo.falsePositive;
+		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
 		int cliqueSizeThresh = inputInfo.cliqueSizeThresh;
 		

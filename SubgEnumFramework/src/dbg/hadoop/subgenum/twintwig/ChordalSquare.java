@@ -44,14 +44,19 @@ import com.hadoop.compression.lzo.LzoCodec;
 public class ChordalSquare{
 	private static InputInfo inputInfo = null;
 	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args)
+		inputInfo = new InputInfo(args);
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
-		String enableBloomFilter = inputInfo.enableBF;
-		
-		double bfProbFP = inputInfo.falsePositive;
+		float falsePositive = inputInfo.falsePositive;
+		boolean enableBF = inputInfo.enableBF;
+		int maxSize = inputInfo.maxSize;
 		String workDir = inputInfo.workDir;
+		
+		if(inputFilePath.isEmpty()){
+			System.err.println("Input file not specified!");
+			System.exit(-1);;
+		}
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
@@ -61,15 +66,24 @@ public class ChordalSquare{
 			Utility.setDefaultFS("");
 		}
 		
+		Configuration conf = new Configuration();
+		
+		if(enableBF){
+			conf.setBoolean("enable.bloom.filter", true);
+			conf.setFloat("bloom.filter.false.positive.rate", falsePositive);
+			String bloomFilterFileName = "bloomFilter." + Config.EDGE + "." + falsePositive;
+			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
+				.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
+		}
+		
 		String stageOneOutput = workDir + "tt.csquare.tmp.1";
 		String stageTwoOutput = workDir + "tt.csquare.res";
 		
-		String[] opts = { workDir, stageOneOutput, enableBloomFilter, String.valueOf(bfProbFP), 
-				outputCompress, numReducers, jarFile };
-		ToolRunner.run(new Configuration(), new ChordalSquareStageOneDriver(), opts);
+		String[] opts = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
+		ToolRunner.run(conf, new ChordalSquareStageOneDriver(), opts);
 		
-		String[] opts2 = { workDir, stageOneOutput, stageTwoOutput, numReducers, jarFile };
-		ToolRunner.run(new Configuration(), new ChordalSquareStageTwoDriver(), opts2);
+		String[] opts2 = { workDir + Config.preparedFileDir, stageOneOutput, stageTwoOutput, numReducers, jarFile };
+		ToolRunner.run(conf, new ChordalSquareStageTwoDriver(), opts2);
 
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
@@ -79,30 +93,18 @@ public class ChordalSquare{
 class ChordalSquareStageOneDriver extends Configured implements Tool{
 
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		// args: <working dir> <outputDir> <enable.bloom.filter> <bloom.filter.false.positive.rate> <enable.output.compress>
-		// <numReducers> <jarFile>
-		Configuration conf = new Configuration();
-		String workingDir = args[0];
-		boolean enableBloomFilter = Boolean.parseBoolean(args[2]);
-		String fpRate = args[3];
-		
-		if(enableBloomFilter){
-			conf.setBoolean("enable.bloom.filter", true);
-			conf.set("bloom.filter.false.positive.rate", fpRate);
-			String bloomFilterFileName = "bloomFilter." + Config.EDGE + "." + fpRate;
-			DistributedCache.addCacheFile(new URI(new Path(workingDir).toUri()
-				.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
-		}
-		int numReducers = Integer.parseInt(args[5]);
+		// args: <working dir> <outputDir> <numReducers> <jarFile>
+		Configuration conf = getConf();
+		int numReducers = Integer.parseInt(args[2]);
 
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
 		//conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.DefaultCodec");
 		
 		Job job = new Job(conf, "TwinTwig ChordalSquare Stage One");
-		((JobConf)job.getConfiguration()).setJar(args[6]);
+		((JobConf)job.getConfiguration()).setJar(args[3]);
 		
-	    MultipleInputs.addInputPath(job, new Path(workingDir + Config.adjListDir + ".0"), 
+	    MultipleInputs.addInputPath(job, new Path(args[0]), 
 	    		SequenceFileInputFormat.class, ChordalSquareStageOneMapper.class);
 		
 		job.setReducerClass(ChordalSquareStageOneReducer.class);
@@ -205,8 +207,8 @@ class ChordalSquareStageOneReducer
 
 class ChordalSquareStageTwoDriver extends Configured implements Tool{
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		// args: <working dir> <stageOneOutputDir> <outputDir> <numReducers> <jarFile>
-		Configuration conf = new Configuration();
+		// args: <edge file> <stageOneOutputDir> <outputDir> <numReducers> <jarFile>
+		Configuration conf = getConf();
 		int numReducers = Integer.parseInt(args[3]);
 
 		conf.setBoolean("mapred.compress.map.output", true);
@@ -216,11 +218,11 @@ class ChordalSquareStageTwoDriver extends Configured implements Tool{
 		Job job = new Job(conf, "TwinTwig ChordalSquare Stage Two");
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		
+	    MultipleInputs.addInputPath(job, new Path(args[0]), 
+	    		SequenceFileInputFormat.class, ChordalSquareEdgeMapper.class);
+		
 	    MultipleInputs.addInputPath(job, new Path(args[1]), 
 	    		SequenceFileInputFormat.class, ChordalSquareStageTwoMapper.class);
-	    
-	    MultipleInputs.addInputPath(job, new Path(args[0] + Config.preparedFileDir), 
-	    		SequenceFileInputFormat.class, ChordalSquareEdgeMapper.class);
 
 	    //job.setMapperClass(SquareMapper.class);			
 		job.setReducerClass(ChordalSquareStageTwoReducer.class);

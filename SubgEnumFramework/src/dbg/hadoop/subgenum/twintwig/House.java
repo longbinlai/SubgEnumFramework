@@ -46,7 +46,13 @@ public class House{
 		String jarFile = inputInfo.jarFile;
 		boolean enableBloomFilter = inputInfo.enableBF;
 		double bfProbFP = inputInfo.falsePositive;
+		int maxSize = inputInfo.maxSize;
 		String workDir = inputInfo.workDir;
+		
+		if(inputFilePath.isEmpty()){
+			System.err.println("Input file not specified!");
+			System.exit(-1);;
+		}
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
@@ -72,10 +78,10 @@ public class House{
 					+ Config.EDGE + "." + bfProbFP), conf);
 		}
 		
-		String[] opts1 = { workDir, stageOneOutput, numReducers, jarFile };
+		String[] opts1 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new SquareDriver(), opts1);
 		
-		String[] opts2 = { workDir + Config.adjListDir + ".0", stageOneOutput, stageTwoOutput, numReducers, jarFile };
+		String[] opts2 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, stageTwoOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new HouseStageTwoDriver(), opts2);
 
 		Utility.getFS().delete(new Path(stageOneOutput));

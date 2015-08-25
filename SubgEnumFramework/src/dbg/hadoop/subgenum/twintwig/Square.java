@@ -49,8 +49,8 @@ public class Square{
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
 		boolean enableBloomFilter = inputInfo.enableBF;
-		
-		double bfProbFP = inputInfo.falsePositive;
+		float bfProbFP = inputInfo.falsePositive;
+		int maxSize = inputInfo.maxSize;
 		String workDir = inputInfo.workDir;
 		
 		if(inputFilePath.isEmpty()){
@@ -71,13 +71,13 @@ public class Square{
 		Configuration conf = new Configuration();
 		if(enableBloomFilter){
 			conf.setBoolean("enable.bloom.filter", true);
-			conf.setDouble("bloom.filter.false.positive.rate", bfProbFP);
+			conf.setFloat("bloom.filter.false.positive.rate", bfProbFP);
 			String bloomFilterFileName = "bloomFilter." + Config.TWINTWIG1 + "." + bfProbFP;
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
 				.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
-		String[] opts = { workDir, outputDir, numReducers, jarFile };
+		String[] opts = { workDir + Config.adjListDir + "." + maxSize, outputDir, numReducers, jarFile };
 		ToolRunner.run(conf, new SquareDriver(), opts);
 
 		Utility.getFS().delete(new Path(outputDir));
@@ -87,10 +87,8 @@ public class Square{
 class SquareDriver extends Configured implements Tool{
 
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		// args: <working dir> <outputDir> <numReducers> <jarFile>
+		// args: <adjListDir> <outputDir> <numReducers> <jarFile>
 		Configuration conf = getConf();
-		String workingDir = args[0];
-		
 		int numReducers = Integer.parseInt(args[2]);
 
 		conf.setBoolean("mapred.compress.map.output", true);
@@ -100,7 +98,7 @@ class SquareDriver extends Configured implements Tool{
 		Job job = new Job(conf, "TwinTwig Square");
 		((JobConf)job.getConfiguration()).setJar(args[3]);
 		
-	    MultipleInputs.addInputPath(job, new Path(workingDir + Config.adjListDir + ".0"), 
+	    MultipleInputs.addInputPath(job, new Path(args[0]), 
 	    		SequenceFileInputFormat.class, SquareMapper.class);
 
 	    //job.setMapperClass(SquareMapper.class);			
