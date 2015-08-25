@@ -51,8 +51,12 @@ public class Square{
 		boolean enableBloomFilter = inputInfo.enableBF;
 		
 		double bfProbFP = inputInfo.falsePositive;
-		String maxInputSize = inputInfo.maxSize;
 		String workDir = inputInfo.workDir;
+		
+		if(inputFilePath.isEmpty()){
+			System.err.println("Input file not specified!");
+			System.exit(-1);;
+		}
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")

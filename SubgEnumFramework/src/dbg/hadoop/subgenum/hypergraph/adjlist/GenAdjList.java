@@ -12,7 +12,7 @@ public class GenAdjList{
 	public static void main(String[] args) throws Exception{
 		inputInfo = new InputInfo(args);
 		String numReducers = inputInfo.numReducers;
-		String inputFile = inputInfo.inputFile;
+		String inputFile = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
 		int maxSize = inputInfo.maxSize;
 		boolean isHyper = inputInfo.isHyper;
