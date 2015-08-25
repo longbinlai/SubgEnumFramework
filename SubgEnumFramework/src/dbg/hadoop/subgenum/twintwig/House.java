@@ -15,6 +15,7 @@ import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.Utility;
+import dbg.hadoop.subgraphs.utils.InputInfo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
@@ -37,50 +38,15 @@ import com.hadoop.compression.lzo.LzoCodec;
 
 
 public class House{
+	private static InputInfo inputInfo = null;
 	public static void main(String[] args) throws Exception{
-		int valuePos = 0;
-		String numReducers = "1";
-		String inputFilePath = "";
-		String jarFile = "";
-		boolean enableBloomFilter = false;
-		
-		double bfProbFP = 0.001;
-		
-		for (int i = 0; i < args.length; ++i) {
-			// System.out.println("args[" + i + "] = " + args[i]);
-			if (args[i].contains("mapred.reduce.tasks")) {
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					numReducers = args[i].substring(valuePos);
-				}
-			}
-			else if(args[i].contains("mapred.input.file")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					inputFilePath = args[i].substring(valuePos);
-				}
-			}
-			else if(args[i].contains("enable.bloom.filter")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					enableBloomFilter = Boolean.valueOf(args[i].substring(valuePos));
-				}
-			}
-			else if(args[i].contains("bloom.filter.false.positive.rate")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					bfProbFP = Double.parseDouble(args[i].substring(valuePos));
-				}
-			}
-			else if(args[i].contains("jar.file.name")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					jarFile = args[i].substring(valuePos);
-				}
-			}
-		}
-
-		String workDir = Utility.getWorkDir(inputFilePath);
+		inputInfo = new InputInfo(args);
+		String numReducers = inputInfo.numReducers;
+		String inputFilePath = inputInfo.inputFilePath;
+		String jarFile = inputInfo.jarFile;
+		boolean enableBloomFilter = inputInfo.enableBF;
+		double bfProbFP = inputInfo.falsePositive;
+		String workDir = inputInfo.workDir;
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
