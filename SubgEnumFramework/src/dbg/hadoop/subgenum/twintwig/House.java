@@ -230,7 +230,7 @@ class HouseStageTwoReducer extends
 		}
 		long v2 = _key.vertexArray.getFirst();
 		long v5 = _key.vertexArray.getSecond();
-		ttList = new TLongArrayList();
+		ttList.clear();
 		for (HVArray value : values) {
 			if (_key.sign == Config.SMALLSIGN) {
 				ttList.add(value.getFirst());
@@ -245,6 +245,15 @@ class HouseStageTwoReducer extends
 				}
 			}
 		}
+	}
+	
+	@Override
+	public void setup(Context context){
+		ttList = new TLongArrayList();
+	}
+	
+	@Override
+	public void cleanup(Context context){
 		ttList.clear();
 		ttList = null;
 	}

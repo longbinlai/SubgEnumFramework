@@ -7,10 +7,6 @@ public class HyperVertexHeap{
 	
 	private long[] arrays;
 	
-	public static void main(String[] args) throws Exception{
-		//HyperVertexHeap heap = new HyperVertexHeap(5);
-	}
-	
 	public HyperVertexHeap(HyperVertexHeap other){
 		this.size = this.heapSize = other.size();
 		long otherArray[] = other.toArrays();
@@ -29,7 +25,6 @@ public class HyperVertexHeap{
 	public HyperVertexHeap(int initialSize){
 		init(initialSize);
 	}
-	
 	
 	/**
 	 * Max heap should satisfy that A[parent[i]] >= A[i]
@@ -209,7 +204,6 @@ public class HyperVertexHeap{
 			res = true;
 		}
 		return res;
-		
 	}
 	
 	public void init(int initialSize){
@@ -220,5 +214,7 @@ public class HyperVertexHeap{
 	
 	public void clear(){
 		this.arrays = null;
+		this.size = 0;
+		this.heapSize = 0;
 	}
 }

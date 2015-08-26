@@ -208,7 +208,7 @@ class FourCliqueStageOneMapper extends
 class FourCliqueStageOneReducer
 	extends Reducer<HVArraySign, HVArray, NullWritable, HVArray> {
 	
-	private TLongArrayList list;
+	private TLongArrayList list = null;
 	private static boolean enableBF;
 	private static BloomFilterOpr bloomfilterOpr;
 	

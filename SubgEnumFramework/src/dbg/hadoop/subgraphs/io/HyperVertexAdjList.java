@@ -227,4 +227,8 @@ public class HyperVertexAdjList implements WritableComparable, Writable{
 		}
 		return res;
 	}
+	
+	public int getSmallNum(){
+		return this.sizeS;
+	}
 }

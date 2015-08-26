@@ -183,8 +183,8 @@ class SquareReducer
 		}
 		long v2 = _key.vertexArray.get(0);
 		long v4 = _key.vertexArray.get(1);
-		ttOneList = new TLongArrayList();
-
+		
+		ttOneList.clear();
 		for(HVArray value : values){
 			if(_key.sign == Config.SMALLSIGN){
 				ttOneList.add(value.getFirst());
@@ -208,7 +208,15 @@ class SquareReducer
 				context.write(NullWritable.get(), new HVArray(array));
 			}
 		}
-
+	}
+	
+	@Override
+	public void setup(Context context){
+		ttOneList = new TLongArrayList();
+	}
+	
+	@Override
+	public void cleanup(Context context){
 		ttOneList.clear();
 		ttOneList = null;
 	}

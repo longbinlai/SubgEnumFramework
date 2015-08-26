@@ -220,7 +220,7 @@ class FiveCliqueStageThreeReducer extends
 		if (_key.sign != Config.SMALLSIGN) {
 			return;
 		}
-		ttOneList = new TLongArrayList();
+		ttOneList.clear();
 		
 		long v1 = _key.vertexArray.get(0);
 		long v2 = _key.vertexArray.get(1);
@@ -245,8 +245,6 @@ class FiveCliqueStageThreeReducer extends
 				}
 			}
 		}
-		ttOneList.clear();
-		ttOneList = null;
 	}
 	
 	@Override
@@ -265,6 +263,13 @@ class FiveCliqueStageThreeReducer extends
 				e.printStackTrace();
 			}
 		}
+		ttOneList = new TLongArrayList();
+	}
+	
+	@Override
+	public void cleanup(Context context){
+		ttOneList.clear();
+		ttOneList = null;
 	}
 }
 

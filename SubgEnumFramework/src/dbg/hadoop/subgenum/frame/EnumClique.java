@@ -211,7 +211,7 @@ class CliqueCountDriver extends Configured implements Tool{
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
 		Configuration conf = getConf();
 		// The parameters: <cliqueDir> <outputDir> <numReducers> <jarFile> <cliqueNumVertices>
-		int numReducers = Integer.parseInt(args[2]);
+		//int numReducers = Integer.parseInt(args[2]);
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
 		Job job = new Job(conf, "Frame " + args[4] + "-Clique Count");
@@ -268,7 +268,7 @@ class CliqueCountReducer extends
 	@Override
 	public void reduce(NullWritable _key, Iterable<LongWritable> values,
 			Context context) throws IOException, InterruptedException {
-		long sum = 0;
+		long sum = 0L;
 		for(LongWritable val : values){
 			sum += val.get();
 		}

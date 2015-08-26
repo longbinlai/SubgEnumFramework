@@ -184,7 +184,7 @@ class ChordalSquareStageOneReducer
 	private static TLongArrayList ttList = null;
 	public void reduce(HVArray _key, Iterable<LongWritable> values,
 			Context context) throws IOException, InterruptedException {	
-		ttList = new TLongArrayList();
+		ttList.clear();
 		for(LongWritable value : values){
 			ttList.add(value.get());
 		}
@@ -200,6 +200,15 @@ class ChordalSquareStageOneReducer
 				context.write(_key, new HVArray(array));
 			}
 		}
+	}
+	
+	@Override
+	public void setup(Context context){
+		ttList = new TLongArrayList();
+	}
+	
+	@Override
+	public void cleanup(Context context){
 		ttList.clear();
 		ttList = null;
 	}
