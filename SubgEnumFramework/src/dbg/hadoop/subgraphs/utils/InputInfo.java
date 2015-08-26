@@ -19,12 +19,13 @@ public class InputInfo {
 	public boolean enableBF = false;
 	public boolean isHyper = false;
 	public boolean isCountOnly = true;
-	public boolean isCountCliqueOnce = false;
+	public boolean isCountPatternOnce = false;
+	public boolean isResultCompression = true;
 	
 	public InputInfo(String[] args){
 		int valuePos = 0;
 		for (int i = 0; i < args.length; ++i) {
-			System.out.println("args[" + i + "] = " + args[i]);
+			System.out.println("args[" + i + "] : " + args[i]);
 			if (args[i].contains("mapred.reduce.tasks")) {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
@@ -110,10 +111,10 @@ public class InputInfo {
 					isCountOnly = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
-			else if (args[i].contains("count.clique.once")){
+			else if (args[i].contains("count.pattern.once")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
-					isCountCliqueOnce = Boolean.parseBoolean(args[i].substring(valuePos));
+					isCountPatternOnce = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
 			else if(args[i].contains("map.input.max.size")){
@@ -122,6 +123,12 @@ public class InputInfo {
 					maxSize = Integer.valueOf(args[i].substring(valuePos));
 				}
 				assert(maxSize > 0);
+			}
+			else if (args[i].contains("result.compression")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isResultCompression = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
 			}
 		}
 	}

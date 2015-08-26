@@ -62,6 +62,15 @@ public class EnumClique {
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
 					.toString() + "/" + Config.cliques), conf);
 		}
+		
+		// Delete existed output
+		if(Utility.getFS().isDirectory(new Path(workDir + "frame.clique.res"))){
+			Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
+		}
+		if(Utility.getFS().isDirectory(new Path(workDir + "frame.clique.cnt"))){
+			Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
+		}
+		
 		long startTime=System.currentTimeMillis();   
 		String[] opts = { workDir + "triangle.res", workDir + "frame.clique.res",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
@@ -72,15 +81,18 @@ public class EnumClique {
 		long endTime = System.currentTimeMillis();
 		System.out.println(" " + (endTime - startTime) / 1000 + "s");
 		
-		if (inputInfo.isCountCliqueOnce) {
+		if (inputInfo.isCountPatternOnce) {
 			String[] opts2 = { workDir + "frame.clique.res", workDir + "frame.clique.cnt", 
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices };
-			ToolRunner.run(conf, new CliqueCountDriver(), opts2);
+			if(inputInfo.isCountOnly)
+				ToolRunner.run(conf, new GeneralPatternCountDriver(CliqueCountMapper1.class), opts2);
+			else
+				ToolRunner.run(conf, new GeneralPatternCountDriver(CliqueCountMapper2.class), opts2);	
 		}
 		
 		//if(isCountOnly){
 			//Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
-			Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
+			//Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
 		//}
 		//else {
 		//	Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
@@ -207,42 +219,6 @@ class EnumCliqueEnumReducer extends
 	}
 }
 
-class CliqueCountDriver extends Configured implements Tool{
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = getConf();
-		// The parameters: <cliqueDir> <outputDir> <numReducers> <jarFile> <cliqueNumVertices>
-		//int numReducers = Integer.parseInt(args[2]);
-		conf.setBoolean("mapred.compress.map.output", true);
-		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
-		Job job = new Job(conf, "Frame " + args[4] + "-Clique Count");
-		((JobConf)job.getConfiguration()).setJar(args[3]);
-		
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputFormatClass(TextOutputFormat.class);
-		//SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		//SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		
-		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(LongWritable.class);
-		if(conf.getBoolean("count.only", true)){
-			job.setMapperClass(CliqueCountMapper1.class);
-		}
-		else{
-			job.setMapperClass(CliqueCountMapper2.class);
-		}
-		job.setCombinerClass(CliqueCountReducer.class);
-		job.setReducerClass(CliqueCountReducer.class);
-		
-		job.setNumReduceTasks(1);
-		
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		job.waitForCompletion(true);
-		return 0;
-	}
-}
-
 class CliqueCountMapper1 extends
 		Mapper<LongWritable, LongWritable, NullWritable, LongWritable> {
 	@Override
@@ -262,19 +238,5 @@ class CliqueCountMapper2 extends
 	}
 }
 
-class CliqueCountReducer extends
-	Reducer<NullWritable, LongWritable, NullWritable, LongWritable> {
-	private static Logger log = Logger.getLogger(CliqueCountReducer.class);
-	@Override
-	public void reduce(NullWritable _key, Iterable<LongWritable> values,
-			Context context) throws IOException, InterruptedException {
-		long sum = 0L;
-		for(LongWritable val : values){
-			sum += val.get();
-		}
-		log.info("# " + context.getConfiguration().get("clique.number.vertices") 
-				+ "-clique: " + sum);
-		context.write(NullWritable.get(), new LongWritable(sum));
-	}
-}
+
 

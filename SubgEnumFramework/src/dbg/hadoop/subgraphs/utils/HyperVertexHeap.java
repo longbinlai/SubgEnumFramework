@@ -125,7 +125,7 @@ public class HyperVertexHeap{
 	 * @param k
 	 */
 	public void insert(long k) {
-		if (size() == arrays.length){
+		if (this.size == arrays.length){
 			resize();
 		}
 		arrays[size] = k;
@@ -214,6 +214,7 @@ public class HyperVertexHeap{
 	
 	public void clear(){
 		this.arrays = null;
+		this.arrays = new long[Config.HEAPINITSIZE];
 		this.size = 0;
 		this.heapSize = 0;
 	}
