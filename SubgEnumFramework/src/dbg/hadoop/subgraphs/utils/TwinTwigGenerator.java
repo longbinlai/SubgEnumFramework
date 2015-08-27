@@ -34,7 +34,7 @@ public class TwinTwigGenerator{
 		this.firstAdd = adjlist.isFirstAdd();
 		this.cur = _cur;
 		this.largerThanCur = adjlist.getLargeDegreeVertices(degree, isMaxDegree);
-		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0(_minDegree);
+		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0(degree, isMaxDegree);
 		this.smallerThanCur2 = adjlist.getSmallDegreeVerticesGroup1(degree, isMaxDegree);
 		this.bf = null;
 		this.enableBF = false;

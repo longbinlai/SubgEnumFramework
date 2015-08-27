@@ -46,6 +46,7 @@ public class EnumSquare {
 	public static void main(String[] args) throws Exception {
 		inputInfo = new InputInfo(args);
 		String workDir = inputInfo.workDir;
+		int maxSize = inputInfo.maxSize;
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
@@ -55,9 +56,6 @@ public class EnumSquare {
 			Utility.setDefaultFS("");
 		}
 		
-		if(Utility.getFS().isDirectory(new Path(workDir + "nonsmallneigh"))){
-			Utility.getFS().delete(new Path(workDir + "nonsmallneigh"));
-		}
 		if(Utility.getFS().isDirectory(new Path(workDir + "frame.square.res"))){
 			Utility.getFS().delete(new Path(workDir + "frame.square.res"));
 		}
@@ -66,14 +64,17 @@ public class EnumSquare {
 		}
 		
 		long startTime=System.currentTimeMillis();   
-			
-		String[] opts0 = { workDir + "adjList2.0", workDir + "nonsmallneigh",inputInfo.numReducers, inputInfo.jarFile};
-		ToolRunner.run(new Configuration(), new CalNonSmallDriver(), opts0);
-		System.out.println("End of Calculate non small neighborhood nodes");
+		
+		if(!Utility.getFS().isDirectory(new Path(workDir + "nonsmallneigh"))){
+			String[] opts0 = { workDir + "adjList2.0", workDir + "nonsmallneigh",inputInfo.numReducers, inputInfo.jarFile};
+			ToolRunner.run(new Configuration(), new CalNonSmallDriver(), opts0);
+			System.out.println("End of Calculate non small neighborhood nodes");
+		}
 		
 		Configuration conf = new Configuration();
 		DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/nonsmallneigh"), conf);
 		
+		conf.setInt("mapred.input.max.size", maxSize);
 		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
 		conf.setFloat("bloom.filter.false.positive.rate", inputInfo.falsePositive);
 		if(inputInfo.enableBF){
@@ -82,7 +83,7 @@ public class EnumSquare {
 					Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
-		String[] opts = { workDir + "adjList2.0", workDir + "frame.square.res",	inputInfo.numReducers, inputInfo.jarFile };
+		String[] opts = { workDir + "adjList2." + maxSize, workDir + "frame.square.res",	inputInfo.numReducers, inputInfo.jarFile };
 		ToolRunner.run(conf, new EnumSquareDriver(), opts);
 		System.out.println("End of Enumeration");
 
@@ -186,30 +187,88 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 	private static TLongHashSet invalidNodeSet = null;
 	private static boolean enableBF = false;
 	private static BloomFilterOpr bloomfilterOpr = null;
+	private static int maxSize = 0;
 	
-	public void map(LongWritable _key, HyperVertexAdjList _value, Context context) throws IOException, InterruptedException{		
-
-		long[] neighbors = _value.getNeighbors();
-		TLongArrayList validNbrs = null;
-		if(invalidNodeSet != null){
-			validNbrs = new TLongArrayList();
-			for(long v: neighbors){
-				if(!invalidNodeSet.contains(v)){
-					validNbrs.add(v);
+	public void map(LongWritable _key, HyperVertexAdjList _value, Context context) throws IOException, InterruptedException{
+		if (maxSize == 0) {
+			long[] neighbors = _value.getNeighbors();
+			TLongArrayList validNbrs = new TLongArrayList();
+			for (long v : neighbors) {
+				if (!invalidNodeSet.contains(v)) {
+						validNbrs.add(v);
+				}
+			}
+			handleOutput(validNbrs.toArray(), null, _key, context);
+		}
+		else{
+			TLongArrayList validNbrs1 = new TLongArrayList();
+			TLongArrayList validNbrs2 = new TLongArrayList();
+			if(!_value.existBackup()){
+				for (long v : _value.getSmallDegreeVerticesGroup1()) {
+					if (!invalidNodeSet.contains(v)) {
+						validNbrs1.add(v);
+					}
+				}
+				for (long v : _value.getLargeDegreeVertices()) {
+					if (!invalidNodeSet.contains(v)) {
+						validNbrs2.add(v);
+					}
+				}
+			} else {
+				for (long v : _value.getSmallDegreeVerticesGroup0()) {
+					if (!invalidNodeSet.contains(v)) {
+						validNbrs1.add(v);
+					}
+				}
+				for (long v : _value.getSmallDegreeVerticesGroup1()) {
+					if (!invalidNodeSet.contains(v)) {
+						validNbrs2.add(v);
+					}
+				}
+			}
+			if(!_value.existBackup()){
+				if(_value.isFirstAdd()){
+					handleOutput(validNbrs2.toArray(), null, _key, context);
+				}
+				handleOutput(validNbrs1.toArray(), null, _key, context);
+			}
+			handleOutput(validNbrs1.toArray(), validNbrs2.toArray(), _key, context);
+		}
+	}
+	
+	private void handleOutput(long[] array1, long[] array2, LongWritable _key, Context context) 
+			throws IOException, InterruptedException{
+		boolean isOutput = true;
+		if(array2 == null){
+			for(int i = 0; i < array1.length - 1; ++i){
+				for(int j = i + 1; j < array1.length; ++j){
+					long v1 = array1[i];
+					long v2 = array1[j];
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(v1),
+								HyperVertex.VertexID(v2));
+					}
+					if(isOutput){
+						context.write(new HVArray(v1, v2), _key);
+					}
 				}
 			}
 		}
-		boolean isOutput = true;
-		for (int i = 0; i < validNbrs.size() - 1; ++i) {
-			for (int j = i + 1; j < validNbrs.size(); ++j) {
-				long v1 = validNbrs.get(i);
-				long v2 = validNbrs.get(j);
-				if(enableBF){
-					isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(v1), 
-							HyperVertex.VertexID(v2));
+		else{
+			for(int i = 0; i < array1.length; ++i){
+				for(int j = 0; j < array2.length; ++j){
+					long v1 = array1[i];
+					long v2 = array2[j];
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(v1),
+								HyperVertex.VertexID(v2));
+					}
+					if(isOutput){
+						context.write(new HVArray(v1, v2), _key);
+					}
 				}
-				if(isOutput)
-					context.write(new HVArray(v1, v2), _key);
 			}
 		}
 	}
@@ -218,9 +277,9 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 	protected void setup(Context context) throws IOException, InterruptedException {
 		// TODO Auto-generated method stub
 		Configuration conf = context.getConfiguration();
+		maxSize = conf.getInt("mapred.input.max.size", 0);
 		FileSystem fs = FileSystem.get(conf);
 		Path[] paths = DistributedCache.getLocalCacheFiles(conf);
-
 		enableBF = conf.getBoolean("enable.bloom.filter", false);
 		try {
 			if (enableBF && bloomfilterOpr == null) {

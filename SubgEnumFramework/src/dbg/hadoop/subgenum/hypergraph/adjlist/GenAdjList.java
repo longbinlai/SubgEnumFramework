@@ -1,6 +1,7 @@
 package dbg.hadoop.subgenum.hypergraph.adjlist;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.utils.Config;
@@ -23,19 +24,42 @@ public class GenAdjList{
 			return;
 		}
 		
+		if (workDir.toLowerCase().contains("hdfs")) {
+			int pos = workDir.substring("hdfs://".length()).indexOf("/")
+					+ "hdfs://".length();
+			Utility.setDefaultFS(workDir.substring(0, pos));
+		} else {
+			Utility.setDefaultFS("");
+		}
+		
 		Configuration conf = new Configuration();
 		conf.setInt("map.input.max.size", maxSize);
 		
 		String outputDir = workDir + Config.hyperGraphAdjList + "." + maxSize;
-		String[] opts = { workDir + Config.hyperEdge, outputDir, 
-			numReducers, jarFile };
-		
-		if(!isHyper){
+		String[] opts = { workDir + Config.hyperEdge, outputDir, numReducers, jarFile };
+
+		if (!isHyper) {
 			outputDir = workDir + Config.adjListDir + "." + maxSize;
 			opts[0] = workDir + Config.preparedFileDir;
 			opts[1] = outputDir;
 		}
-
-		ToolRunner.run(conf, new GenAdjListDriver(), opts);
+		
+		if(Utility.getFS().isDirectory(new Path(outputDir)))
+			Utility.getFS().delete(new Path(outputDir));
+		if(Utility.getFS().isDirectory(new Path(outputDir + ".tmp")))
+			Utility.getFS().delete(new Path(outputDir + ".tmp"));
+		
+		if (maxSize == 0) {
+			ToolRunner.run(conf, new GenAdjListDriver(), opts);
+		}
+		else{
+			opts[1] = outputDir + ".tmp";
+			ToolRunner.run(conf, new GenAdjListDriver(), opts);
+			opts[0] = outputDir + ".tmp";
+			opts[1] = outputDir;
+			ToolRunner.run(conf, new GenAdjListRandomShuffleDriver(), opts);
+			
+			Utility.getFS().delete(new Path(outputDir + ".tmp"));
+		}
 	}
 }

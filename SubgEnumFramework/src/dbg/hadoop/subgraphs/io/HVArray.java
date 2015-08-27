@@ -248,7 +248,7 @@ public class HVArray implements WritableComparable, Writable{
 	public int hashCode(){
 		int sum = 0;
 		for(int i = 0; i < this.length; ++i){
-			sum += 31^i * HyperVertex.VertexID(this.hyperVertexArray[i]);
+			sum += 31^(this.length - 1 - i) * this.hyperVertexArray[i];
 		}
 		return sum;
 	}

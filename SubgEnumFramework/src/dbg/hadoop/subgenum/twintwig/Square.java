@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
 
 import dbg.hadoop.subgraphs.io.HVArray;
@@ -14,14 +13,12 @@ import dbg.hadoop.subgraphs.io.HVArraySignComparator;
 import dbg.hadoop.subgraphs.io.HyperVertexAdjList;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
-import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.TwinTwigGenerator;
 import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +29,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -67,6 +63,9 @@ public class Square{
 		}
 		
 		String outputDir = workDir + "tt.square.res";
+		
+		if(Utility.getFS().isDirectory(new Path(outputDir)))
+			Utility.getFS().delete(new Path(outputDir));
 		
 		Configuration conf = new Configuration();
 		if(enableBloomFilter){

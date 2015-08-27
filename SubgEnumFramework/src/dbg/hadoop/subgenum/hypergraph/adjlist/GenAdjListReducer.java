@@ -32,8 +32,7 @@ import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
  * @author robeen
  *
  */
-public class GenAdjListReducer
-		extends
+public class GenAdjListReducer extends
 		Reducer<LongWritable, LongWritable, LongWritable, HyperVertexAdjList> {
 	//private MaxHeapLimitSize heaps = null;
 	private HyperVertexHeap largeDegreeVertices = null;

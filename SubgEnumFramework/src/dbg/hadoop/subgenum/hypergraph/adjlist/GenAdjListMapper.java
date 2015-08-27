@@ -12,7 +12,6 @@ import dbg.hadoop.subgraphs.utils.HyperVertex;
  * @author robeen
  *
  */
-// public class InitMapper extends MapReduceBase implements
 public class GenAdjListMapper
 		extends Mapper<LongWritable, LongWritable, LongWritable, LongWritable> {
 
