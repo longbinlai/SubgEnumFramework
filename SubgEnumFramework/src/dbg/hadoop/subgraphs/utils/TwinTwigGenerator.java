@@ -24,7 +24,7 @@ public class TwinTwigGenerator{
 		this.firstAdd = adjlist.isFirstAdd();
 		this.cur = _cur;
 		this.largerThanCur = adjlist.getLargeDegreeVertices();
-		//this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
+		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
 		this.smallerThanCur2 = adjlist.getSmallDegreeVerticesGroup1();
 		this.bf = null;
 		this.enableBF = false;
@@ -34,7 +34,7 @@ public class TwinTwigGenerator{
 		this.firstAdd = adjlist.isFirstAdd();
 		this.cur = _cur;
 		this.largerThanCur = adjlist.getLargeDegreeVertices(degree, isMaxDegree);
-		//this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0(_minDegree);
+		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0(_minDegree);
 		this.smallerThanCur2 = adjlist.getSmallDegreeVerticesGroup1(degree, isMaxDegree);
 		this.bf = null;
 		this.enableBF = false;
@@ -44,7 +44,7 @@ public class TwinTwigGenerator{
 		this.firstAdd = adjlist.isFirstAdd();
 		this.cur = _cur;
 		this.largerThanCur = adjlist.getLargeDegreeVertices();
-		//this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
+		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
 		this.smallerThanCur2 = adjlist.getSmallDegreeVerticesGroup1();
 	
 		this.bf = _bf;
@@ -57,16 +57,8 @@ public class TwinTwigGenerator{
 		this.firstAdd = adjlist.isFirstAdd();
 		this.cur = _cur;
 		this.largerThanCur = adjlist.getLargeDegreeVertices(degree, isMaxDegree);
-		//this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
+		this.smallerThanCur1 = adjlist.getSmallDegreeVerticesGroup0();
 		this.smallerThanCur2 = adjlist.getSmallDegreeVerticesGroup1(degree, isMaxDegree);
-		
-
-		if(this.largerThanCur.length > 1){
-			//System.out.println(HyperVertex.toString(this.cur));
-			//System.out.println("degree = " + degree);
-			//Utility.printArray(this.largerThanCur);
-		}
-		
 		this.bf = _bf;
 		if(this.bf != null){
 			this.enableBF = true;
@@ -169,14 +161,17 @@ public class TwinTwigGenerator{
 	
 	@SuppressWarnings("unchecked")
 	public void genTwinTwigTwo(Context context, int sign, byte keyMap) throws IOException, InterruptedException{
+		if(this.largerThanCur.length == 0){
+			return;
+		}
 		if(allowThree(this.cur)){ // Output {cur, cur, cur}
 			context.write(new HVArraySign(this.cur, 
 					this.cur, this.cur, sign, keyMap), 
 					new HVArray(this.cur, this.cur, this.cur, keyMap));
 		}
 		if(this.smallerThanCur2.length == 0){ // Output {cur, cur, larger}
-			for(int j = 0; j < this.largerThanCur.length; ++j){ //v3
-				if(allowTwo(this.cur)){
+			if(allowTwo(this.cur)){
+				for(int j = 0; j < this.largerThanCur.length; ++j){ //v3
 					context.write(new HVArraySign(this.cur, this.cur, 
 							this.largerThanCur[j], sign, keyMap), 
 							new HVArray(this.cur, this.cur, 
@@ -215,20 +210,38 @@ public class TwinTwigGenerator{
 	@SuppressWarnings("unchecked")
 	public void genTwinTwigThree(Context context, int sign, byte keyMap) throws IOException, InterruptedException{
 		boolean isOutput = true;
-		for (int i = 0; i < this.smallerThanCur2.length - 1; ++i) {
-			for (int j = i + 1; j < this.smallerThanCur2.length; ++j) {
-				if (this.enableBF) {
-					isOutput = this.bf.test(
-							HyperVertex.VertexID(this.smallerThanCur2[i]),
-							HyperVertex.VertexID(this.smallerThanCur2[j]));
-				}
-				if(isOutput){
-					context.write(new HVArraySign(this.cur, this.smallerThanCur2[i], 
-							this.smallerThanCur2[j], sign, keyMap), new HVArray(this.cur, 
-									this.smallerThanCur2[i], this.smallerThanCur2[j], keyMap));
+		if(this.smallerThanCur1.length == 0) {
+			for (int i = 0; i < this.smallerThanCur2.length - 1; ++i) {
+				for (int j = i + 1; j < this.smallerThanCur2.length; ++j) {
+					if (this.enableBF) {
+						isOutput = this.bf.test(
+								HyperVertex.VertexID(this.smallerThanCur2[i]),
+								HyperVertex.VertexID(this.smallerThanCur2[j]));
+					}
+					if(isOutput){
+						context.write(new HVArraySign(this.cur, this.smallerThanCur2[i], 
+								this.smallerThanCur2[j], sign, keyMap), new HVArray(this.cur, 
+										this.smallerThanCur2[i], this.smallerThanCur2[j], keyMap));
+					}
 				}
 			}
-		}
+	    }
+	    else{
+	    	for (int i = 0; i < this.smallerThanCur1.length; ++i){
+	    		for(int j = 0; j < this.smallerThanCur2.length; ++j){
+					if (this.enableBF) {
+						isOutput = this.bf.test(
+								HyperVertex.VertexID(this.smallerThanCur1[i]),
+								HyperVertex.VertexID(this.smallerThanCur2[j]));
+					}
+					if(isOutput){
+						context.write(new HVArraySign(this.cur, this.smallerThanCur1[i], 
+								this.smallerThanCur2[j], sign, keyMap), new HVArray(this.cur, 
+										this.smallerThanCur1[i], this.smallerThanCur2[j], keyMap));
+					}
+	    		}
+	    	}
+	    }
 	}
 	
 	/**
