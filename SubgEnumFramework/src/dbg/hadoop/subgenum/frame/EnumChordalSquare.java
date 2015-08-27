@@ -1,7 +1,5 @@
 package dbg.hadoop.subgenum.frame;
 
-import gnu.trove.list.array.TLongArrayList;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 
@@ -14,29 +12,25 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.hadoop.compression.lzo.LzoCodec;
 
 import dbg.hadoop.subgraphs.io.HVArray;
-import dbg.hadoop.subgraphs.utils.BinarySearch;
 import dbg.hadoop.subgraphs.utils.Config;
-import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 
 public class EnumChordalSquare {
-	public static InputInfo inputInfo  = new InputInfo();
+	public static InputInfo inputInfo  = null;
 	public static String workdir="";
 	public static String filename="";
 

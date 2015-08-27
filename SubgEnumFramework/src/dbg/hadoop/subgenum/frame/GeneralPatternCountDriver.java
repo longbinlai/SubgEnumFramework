@@ -32,7 +32,7 @@ public class GeneralPatternCountDriver extends Configured implements Tool{
 		//int numReducers = Integer.parseInt(args[2]);
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
-		Job job = new Job(conf, "Frame ChordalSquare Count");
+		Job job = new Job(conf, "Frame Pattern Count");
 		((JobConf)job.getConfiguration()).setJar(args[3]);
 		
 		job.setInputFormatClass(SequenceFileInputFormat.class);

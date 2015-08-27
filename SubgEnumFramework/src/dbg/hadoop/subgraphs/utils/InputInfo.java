@@ -21,6 +21,8 @@ public class InputInfo {
 	public boolean isCountOnly = true;
 	public boolean isCountPatternOnce = false;
 	public boolean isResultCompression = true;
+	public boolean isSquarePartition = false;
+	public int squarePartitionThresh = 2000;
 	
 	public InputInfo(String[] args){
 		int valuePos = 0;
@@ -128,6 +130,18 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isResultCompression = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enum.house.square.partition=")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isSquarePartition = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enum.house.square.partition.thresh=")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					squarePartitionThresh = Integer.parseInt(args[i].substring(valuePos));
 				}
 			}
 		}

@@ -41,7 +41,7 @@ import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class EnumSquare {
-	private static InputInfo inputInfo  = new InputInfo();
+	private static InputInfo inputInfo  = null;
 
 	public static void main(String[] args) throws Exception {
 		inputInfo = new InputInfo(args);

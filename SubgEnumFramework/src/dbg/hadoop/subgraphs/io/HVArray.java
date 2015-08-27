@@ -56,6 +56,7 @@ public class HVArray implements WritableComparable, Writable{
 		System.arraycopy(largerThanCur, 0, this.hyperVertexArray, len1 + 1, len2);
 	}
 	
+	/*
 	public HVArray(long[] smallerThanCur, long[] largerThanCur){
 		int len1 = smallerThanCur.length;
 		int len2 = largerThanCur.length;
@@ -63,6 +64,21 @@ public class HVArray implements WritableComparable, Writable{
 		this.hyperVertexArray = new long[this.length];
 		System.arraycopy(smallerThanCur, 0, this.hyperVertexArray, 0, len1);
 		System.arraycopy(largerThanCur, 0, this.hyperVertexArray, len1, len2);
+	}*/
+	public HVArray(long[] array1, long[] array2){
+		int len1 = array1.length;
+		if(array2 == null){
+			this.hyperVertexArray = new long[len1 + 1];
+			this.hyperVertexArray[0] = -1L;
+			System.arraycopy(array1, 0, this.hyperVertexArray, 1, len1);
+		}
+		else{
+			int len2 = array2.length;
+			this.hyperVertexArray = new long[len1 + len2 + 1];
+			this.hyperVertexArray[0] = len1;
+			System.arraycopy(array1, 0, this.hyperVertexArray, 1, len1);
+			System.arraycopy(array2, 0, this.hyperVertexArray, len1 + 1, len2);
+		}
 	}
 	
 	/**

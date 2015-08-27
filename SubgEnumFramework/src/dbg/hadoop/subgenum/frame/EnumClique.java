@@ -38,7 +38,7 @@ import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class EnumClique {
-	private static InputInfo inputInfo  = new InputInfo();
+	private static InputInfo inputInfo  = null;
 	public static String workdir="";
 	public static String filename="";
 

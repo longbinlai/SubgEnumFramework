@@ -52,6 +52,7 @@ public class Config{
 	public static int TWINTWIG1 = 1; // X - W - Y (W < X < Y)
 	public static int TWINTWIG2 = 2; // X - W - Y (X < W < Y)
 	public static int TWINTWIG3 = 3; // X - W - Y (X < Y < W)
+	public static int BF_TRIANGLE = 4;
 	
 	public static int HEAPINITSIZE = 20; 
 	
