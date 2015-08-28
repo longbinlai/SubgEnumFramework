@@ -1,28 +1,19 @@
 package dbg.hadoop.subgenum.frame;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.hadoop.compression.lzo.LzoCodec;
-
 import dbg.hadoop.subgraphs.io.HVArray;
+import dbg.hadoop.subgraphs.io.HVArrayComparator;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
@@ -34,6 +25,7 @@ public class EnumChordalSquare {
 	public static String workdir="";
 	public static String filename="";
 
+	@SuppressWarnings("deprecation")
 	public static void main(String[] args) throws Exception {
 		inputInfo = new InputInfo(args);
 		String workDir = inputInfo.workDir;
@@ -59,8 +51,16 @@ public class EnumChordalSquare {
 
 		long startTime=System.currentTimeMillis();   
 			
-		String[] Opts = { workDir + "triangle.res", workDir + "frame.csquare.res",	inputInfo.numReducers, inputInfo.jarFile};
-		ToolRunner.run(new Configuration(), new EnumChordalSquareDriver(), Opts);
+		String[] opts = { workDir + "triangle.res", "", workDir + "frame.csquare.res",
+				inputInfo.numReducers, inputInfo.jarFile};
+		ToolRunner.run(new Configuration(), new GeneralDriver("Frame ChordalSquare", 
+				EnumChordalSquareMapper.class, 
+				EnumChordalSquareReducer.class, 
+			    HVArray.class, HVArray.class, //OutputKV
+				HVArray.class, LongWritable.class, //MapOutputKV
+				SequenceFileInputFormat.class, 
+				SequenceFileOutputFormat.class,
+				HVArrayComparator.class), opts);
 		System.out.println("End of Enumeration");
 
 		long endTime = System.currentTimeMillis();
@@ -71,39 +71,6 @@ public class EnumChordalSquare {
 					inputInfo.numReducers, inputInfo.jarFile };
 			ToolRunner.run(conf, new GeneralPatternCountDriver(ChordalSquareCountMapper.class), opts2);
 		}
-	}
-}
-
-class EnumChordalSquareDriver extends Configured implements Tool{
-
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = new Configuration();
-		// The parameters: <inputfile> <outputDir> <numReducers> <seperator> <jarFile>
-		int numReducers = Integer.parseInt(args[2]);
-		Job job = new Job(conf, "Frame ChordalSquare");
-		((JobConf)job.getConfiguration()).setJar(args[3]);
-		job.setMapperClass(EnumChordalSquareMapper.class);
-		job.setReducerClass(EnumChordalSquareReducer.class);
-		
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		
-		job.setMapOutputKeyClass(HVArray.class);
-		job.setMapOutputValueClass(LongWritable.class);
-		job.setOutputKeyClass(HVArray.class);
-		job.setOutputValueClass(HVArray.class);
-		
-		job.setNumReduceTasks(numReducers);
-		
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		//client.setConf(conf);
-		//JobClient.runJob(job);
-		job.waitForCompletion(true);
-		return 0;
 	}
 }
 

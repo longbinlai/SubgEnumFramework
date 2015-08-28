@@ -4,30 +4,19 @@ import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import com.hadoop.compression.lzo.LzoCodec;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayComparator;
@@ -40,6 +29,7 @@ import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
+@SuppressWarnings("deprecation")
 public class EnumSquare {
 	private static InputInfo inputInfo  = null;
 
@@ -66,8 +56,16 @@ public class EnumSquare {
 		long startTime=System.currentTimeMillis();   
 		
 		if(!Utility.getFS().isDirectory(new Path(workDir + "nonsmallneigh"))){
-			String[] opts0 = { workDir + "adjList2.0", workDir + "nonsmallneigh",inputInfo.numReducers, inputInfo.jarFile};
-			ToolRunner.run(new Configuration(), new CalNonSmallDriver(), opts0);
+			String[] opts0 = { workDir + "adjList2.0", "", workDir + "nonsmallneigh",
+					inputInfo.numReducers, inputInfo.jarFile};
+			ToolRunner.run(new Configuration(), new GeneralDriver("CalNonSmall", 
+					CalNonSmallMapper.class, 
+					CalNonSmallReducer.class, 
+					NullWritable.class, LongWritable.class, //OutputKV
+					//HVArray.class, LongWritable.class, //MapOutputKV
+					SequenceFileInputFormat.class, 
+					SequenceFileOutputFormat.class,
+					null), opts0);
 			System.out.println("End of Calculate non small neighborhood nodes");
 		}
 		
@@ -83,8 +81,16 @@ public class EnumSquare {
 					Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
-		String[] opts = { workDir + "adjList2." + maxSize, workDir + "frame.square.res",	inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new EnumSquareDriver(), opts);
+		String[] opts = { workDir + "adjList2." + maxSize, "",
+				workDir + "frame.square.res",  inputInfo.numReducers, inputInfo.jarFile };
+		ToolRunner.run(conf, new GeneralDriver("Frame Square", 
+						EnumSquareMapper.class, 
+						EnumSquareReducer.class, 
+						HVArray.class, HVArray.class, //OutputKV
+						HVArray.class, LongWritable.class, //MapOutputKV
+						SequenceFileInputFormat.class, 
+						SequenceFileOutputFormat.class,
+						HVArrayComparator.class), opts);
 		System.out.println("End of Enumeration");
 
 		long endTime=System.currentTimeMillis();
@@ -97,33 +103,6 @@ public class EnumSquare {
 		}
 	}
 	
-}
-
-class CalNonSmallDriver extends Configured implements Tool{
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = new Configuration();
-		// The parameters: <inputfile> <outputDir> <numReducers> <seperator> <jarFile>
-		int numReducers = Integer.parseInt(args[2]);
-		Job job = new Job(conf, "CalNonSmall");
-		((JobConf)job.getConfiguration()).setJar(args[3]);
-		job.setMapperClass(CalNonSmallMapper.class);
-		job.setReducerClass(CalNonSmallReducer.class);
-		
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(LongWritable.class);
-		
-		job.setNumReduceTasks(numReducers);
-		
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		job.waitForCompletion(true);
-		return 0;
-	}
 }
 
 class CalNonSmallMapper extends
@@ -148,41 +127,7 @@ class CalNonSmallReducer extends
 	}
 }
 
-class EnumSquareDriver extends Configured implements Tool{
-
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = getConf();
-		// The parameters: <inputfile> <outputDir> <numReducers> <jarFile>
-		int numReducers = Integer.parseInt(args[2]);
-		
-		conf.setBoolean("mapred.compress.map.output", true);
-		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
-		Job job = new Job(conf, "Frame Square");
-		((JobConf)job.getConfiguration()).setJar(args[3]);
-		job.setMapperClass(EnumSquareMapper.class);
-		job.setReducerClass(EnumSquareReducer.class);
-		
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		
-		job.setMapOutputKeyClass(HVArray.class);
-		job.setMapOutputValueClass(LongWritable.class);
-		job.setOutputKeyClass(HVArray.class);
-		job.setOutputValueClass(HVArray.class);
-		job.setSortComparatorClass(HVArrayComparator.class);
-		
-		job.setNumReduceTasks(numReducers);
-		
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		job.waitForCompletion(true);
-		return 0;
-	}
-}
-
+@SuppressWarnings("deprecation")
 class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray, LongWritable> {
 	private static TLongHashSet invalidNodeSet = null;
 	private static boolean enableBF = false;
@@ -279,6 +224,7 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 		Configuration conf = context.getConfiguration();
 		maxSize = conf.getInt("mapred.input.max.size", 0);
 		FileSystem fs = FileSystem.get(conf);
+
 		Path[] paths = DistributedCache.getLocalCacheFiles(conf);
 		enableBF = conf.getBoolean("enable.bloom.filter", false);
 		try {

@@ -48,6 +48,7 @@ import dbg.hadoop.subgraphs.utils.Utility;
 public class EnumHouse {
 	private static InputInfo inputInfo  = null;
 
+	@SuppressWarnings("deprecation")
 	public static void main(String[] args) throws Exception {
 		inputInfo = new InputInfo(args);
 		String workDir = inputInfo.workDir;
@@ -74,13 +75,7 @@ public class EnumHouse {
 			Utility.getFS().delete(new Path(workDir + "frame.house.cnt"));
 		}
 		
-		long startTime=System.currentTimeMillis();   
-		
-		if(!Utility.getFS().isDirectory(new Path(workDir + "nonsmallneigh"))){
-			String[] opts0 = { workDir + "adjList2.0", workDir + "nonsmallneigh",inputInfo.numReducers, inputInfo.jarFile};
-			ToolRunner.run(new Configuration(), new CalNonSmallDriver(), opts0);
-			System.out.println("End of Calculate non small neighborhood nodes");
-		}
+		long startTime=System.currentTimeMillis(); 
 		
 		Configuration conf = new Configuration();
 		DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/nonsmallneigh"), conf);
@@ -95,17 +90,30 @@ public class EnumHouse {
 		}
 		
 		// Enumerate Square
-		String[] opts = { workDir + "adjList2." + maxSize, workDir + "frame.house.tmp.1", 
+		String[] opts = { workDir + "adjList2." + maxSize, "", workDir + "frame.house.tmp.1", 
 				inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new EnumSquareDriver(), opts);
+		ToolRunner.run(conf, new GeneralDriver("Frame Square", 
+				EnumSquareMapper.class, 
+				EnumSquareReducer.class, 
+				HVArray.class, HVArray.class, //OutputKV
+				HVArray.class, LongWritable.class, //MapOutputKV
+				SequenceFileInputFormat.class, 
+				SequenceFileOutputFormat.class,
+				HVArrayComparator.class), opts);
 		
 		// Partition the square
 		conf.setBoolean("enum.house.square.partition", inputInfo.isSquarePartition);
 		if(inputInfo.isSquarePartition){
 			conf.setInt("enum.house.square.partition.thresh", inputInfo.squarePartitionThresh);
-			String[] opts1 = { workDir +  "frame.house.tmp.1", workDir + "frame.house.tmp.2", 
+			String[] opts1 = { workDir +  "frame.house.tmp.1", "", workDir + "frame.house.tmp.2", 
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(conf, new EnumHouseSquarePartDriver(), opts1);
+			ToolRunner.run(conf, new GeneralDriver("Frame Squre Partition", 
+					EnumHouseSquarePartMapper.class, 
+					EnumHouseSquarePartReducer.class, 
+					HVArray.class, HVArray.class, //OutputKV
+					SequenceFileInputFormat.class, 
+					SequenceFileOutputFormat.class,
+					HVArrayComparator.class), opts1);
 		}
 		
 		// Enumerate House
@@ -114,7 +122,17 @@ public class EnumHouse {
 		if(inputInfo.isSquarePartition){
 			opts2[1] = workDir + "frame.house.tmp.2";
 		}
-		ToolRunner.run(conf, new EnumHouseDriver(), opts2);
+		ToolRunner.run(conf, new GeneralDriver("Frame House", 
+				EnumHouseTriangleMapper.class,
+				EnumHouseSquareMapper.class,
+				EnumHouseReducer.class, 
+				HVArray.class, HVArray.class, //OutputKV
+				HVArraySign.class, HVArray.class, //MapOutputKV
+				SequenceFileInputFormat.class, 
+				SequenceFileInputFormat.class, 
+				SequenceFileOutputFormat.class,
+				HVArraySignComparator.class, 
+				HVArrayGroupComparator.class), opts2);
 		
 		System.out.println("End of Enumeration");
 
@@ -126,41 +144,9 @@ public class EnumHouse {
 					inputInfo.numReducers, inputInfo.jarFile };
 			ToolRunner.run(conf, new GeneralPatternCountDriver(HouseCountMapper.class), opts3);
 		}
-	}
-}
-
-class EnumHouseSquarePartDriver extends Configured implements Tool{
-
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = getConf();
-		// The parameters: <squareFile> <outputDir> <numReducers> <jarFile>
-		int numReducers = Integer.parseInt(args[2]);
 		
-		conf.setBoolean("mapred.compress.map.output", true);
-		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
-		Job job = new Job(conf, "Frame House Square partition");
-		((JobConf)job.getConfiguration()).setJar(args[3]);
-		
-		job.setMapperClass(EnumHouseSquarePartMapper.class);
-		job.setReducerClass(EnumHouseSquarePartReducer.class);
-		
-		job.setInputFormatClass(SequenceFileInputFormat.class);
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		
-		job.setOutputKeyClass(HVArray.class);
-		job.setOutputValueClass(HVArray.class);
-		
-		job.setSortComparatorClass(HVArrayComparator.class);
-		
-		job.setNumReduceTasks(numReducers);
-		
-		FileInputFormat.setInputPaths(job, new Path(args[0]));
-		FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-		job.waitForCompletion(true);
-		return 0;
+		Utility.getFS().delete(new Path(workDir + "frame.house.tmp.1"));
+		Utility.getFS().delete(new Path(workDir + "frame.house.tmp.2"));
 	}
 }
 
@@ -173,7 +159,7 @@ class EnumHouseSquarePartMapper extends
 	@Override
 	public void map(HVArray _key, HVArray _value, Context context) 
 		throws IOException, InterruptedException {
-		ArrayList<long[]> arrayPartitioner = partArray(_value.toArrays(), squarePartThresh);
+		ArrayList<long[]> arrayPartitioner = Utility.partArray(_value.toArrays(), squarePartThresh);
 		for(int i = 0; i < arrayPartitioner.size(); ++i){
 			context.write(new HVArray(_key.getFirst(), _key.getSecond(), rand.nextLong()), 
 					new HVArray(arrayPartitioner.get(i), null));
@@ -182,31 +168,6 @@ class EnumHouseSquarePartMapper extends
 						new HVArray(arrayPartitioner.get(i), arrayPartitioner.get(j)));
 			}
 		}
-	}
-	
-	private static ArrayList<long[]> partArray(long[] array, int thresh){
-		ArrayList<long[]> arrayPartitioner = new ArrayList<long []>();
-		if(thresh == 0 || thresh > array.length){
-			arrayPartitioner.add(array);
-			return arrayPartitioner;
-		}
-		int numGroups = array.length / thresh;
-		if (array.length - numGroups * thresh > thresh * 0.1) {
-			if (numGroups != 0) {
-				numGroups += 1;
-			}
-		}
-		int from = 0, to = 0;
-		for (int i = 0; i < numGroups; ++i) {
-			from = i * thresh;
-			if (i == numGroups - 1) {
-				to = array.length;
-			} else {
-				to = (i + 1) * thresh;
-			}
-			arrayPartitioner.add(Arrays.copyOfRange(array, from, to));
-		}
-		return arrayPartitioner;
 	}
 
 	@Override
@@ -224,52 +185,6 @@ class EnumHouseSquarePartReducer extends
 		for (HVArray val : values) {
 			context.write(new HVArray(key.getFirst(), key.getSecond()), val);
 		}
-	}
-}
-
-
-class EnumHouseDriver extends Configured implements Tool{
-
-	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = getConf();
-		// The parameters: <triangleFile> <squareFile> <outputDir> <numReducers> <jarFile>
-		int numReducers = Integer.parseInt(args[3]);
-		
-		conf.setBoolean("mapred.compress.map.output", true);
-		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
-		Job job = new Job(conf, "Frame House");
-		((JobConf)job.getConfiguration()).setJar(args[4]);
-		//job.setMapperClass(EnumSquareMapper.class);
-		job.setReducerClass(EnumHouseReducer.class);
-		
-		//job.setInputFormatClass(SequenceFileInputFormat.class);
-		MultipleInputs.addInputPath(job, 
-				new Path(args[0]),
-				SequenceFileInputFormat.class,
-				EnumHouseTriangleMapper.class);
-		MultipleInputs.addInputPath(job, 
-				new Path(args[1]),
-				SequenceFileInputFormat.class,
-				EnumHouseSquareMapper.class);
-		
-		job.setOutputFormatClass(SequenceFileOutputFormat.class);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
-		
-		job.setMapOutputKeyClass(HVArraySign.class);
-		job.setMapOutputValueClass(HVArray.class);
-		job.setOutputKeyClass(HVArray.class);
-		job.setOutputValueClass(HVArray.class);
-		
-		job.setSortComparatorClass(HVArraySignComparator.class);
-		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
-		
-		job.setNumReduceTasks(numReducers);
-		
-		FileOutputFormat.setOutputPath(job, new Path(args[2]));
-
-		job.waitForCompletion(true);
-		return 0;
 	}
 }
 
@@ -305,7 +220,7 @@ class EnumHouseSquareMapper extends
 			handleCompressedSquare(_key.toArrays(), array, context);
 		else{
 			if(array[0] == -1){
-				handleCompressedSquare(_key.toArrays(), array, context);
+				handleCompressedSquare(_key.toArrays(), Arrays.copyOfRange(array, 1, array.length), context);
 			}
 			else{
 				handleCompressedSquarePart(_key.toArrays(), array, context);

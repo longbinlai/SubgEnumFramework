@@ -328,42 +328,6 @@ public class Utility{
 	}
 	
 	
-	
-	public static int countSubgraphs(long[] array){
-		int count = 0;
-		if(array == null || array.length == 0){
-			return count;
-		}
-		TLongIntHashMap map = new TLongIntHashMap();
-		for(long hypervertex: array){
-			if(map.containsKey(hypervertex)){
-				map.increment(hypervertex);
-			}
-			else{
-				map.put(hypervertex, 1);
-			}
-		}
-		count = 1;
-		for(long hypervertex: map.keys()){
-			int size = HyperVertex.Size(hypervertex);
-			int num = map.get(hypervertex);
-			if(num == 1){
-				count *= size;
-			}
-			else{
-				// A combination (size, num)
-				for(int i = size; i > size - num; --i){
-					count *= i;
-				}
-				for(int i = 2; i <= num; ++i){
-					count /= i;
-				}
-			}
-		}
-		return count;
-	}
-	
-	
 	public static void printMemoryUsage(){
 		StringBuilder sb = new StringBuilder();
 		Runtime runtime = Runtime.getRuntime();
@@ -457,6 +421,31 @@ public class Utility{
 		}
 		
 		return dir;
+	}
+	
+	public static ArrayList<long[]> partArray(long[] array, int thresh){
+		ArrayList<long[]> arrayPartitioner = new ArrayList<long []>();
+		if(thresh == 0 || thresh > array.length){
+			arrayPartitioner.add(array);
+			return arrayPartitioner;
+		}
+		int numGroups = array.length / thresh;
+		if (array.length - numGroups * thresh > thresh * 0.1) {
+			if (numGroups != 0) {
+				numGroups += 1;
+			}
+		}
+		int from = 0, to = 0;
+		for (int i = 0; i < numGroups; ++i) {
+			from = i * thresh;
+			if (i == numGroups - 1) {
+				to = array.length;
+			} else {
+				to = (i + 1) * thresh;
+			}
+			arrayPartitioner.add(Arrays.copyOfRange(array, from, to));
+		}
+		return arrayPartitioner;
 	}
 	
 }

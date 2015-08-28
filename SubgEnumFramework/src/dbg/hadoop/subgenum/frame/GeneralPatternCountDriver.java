@@ -17,6 +17,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 
+@SuppressWarnings("rawtypes")
 public class GeneralPatternCountDriver extends Configured implements Tool{
 	
 	private Class<? extends Mapper> mapperClass = null;
@@ -29,7 +30,6 @@ public class GeneralPatternCountDriver extends Configured implements Tool{
 		assert(mapperClass != null);
 		Configuration conf = getConf();
 		// The parameters: <cliqueDir> <outputDir> <numReducers> <jarFile>
-		//int numReducers = Integer.parseInt(args[2]);
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "com.hadoop.compression.lzo.LzoCodec");
 		Job job = new Job(conf, "Frame Pattern Count");
@@ -37,8 +37,6 @@ public class GeneralPatternCountDriver extends Configured implements Tool{
 		
 		job.setInputFormatClass(SequenceFileInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
-		//SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		//SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
 		
 		job.setOutputKeyClass(NullWritable.class);
 		job.setOutputValueClass(LongWritable.class);
