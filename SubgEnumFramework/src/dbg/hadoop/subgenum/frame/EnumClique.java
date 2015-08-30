@@ -23,26 +23,14 @@ import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Graph;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.CliqueEncoder;
-import dbg.hadoop.subgraphs.utils.Utility;
 
 @SuppressWarnings("deprecation")
 public class EnumClique {
-	private static InputInfo inputInfo  = null;
-	public static String workdir="";
-	public static String filename="";
 
-	public static void main(String[] args) throws Exception {
-		inputInfo = new InputInfo(args);
+	public static void run(InputInfo inputInfo) throws Exception {
+		//inputInfo = new InputInfo(args);
 		boolean isCountOnly = inputInfo.isCountOnly;
 		String workDir = inputInfo.workDir;
-		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("count.only", isCountOnly);
@@ -52,15 +40,6 @@ public class EnumClique {
 					.toString() + "/" + Config.cliques), conf);
 		}
 		
-		// Delete existed output
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.clique.res"))){
-			Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
-		}
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.clique.cnt"))){
-			Utility.getFS().delete(new Path(workDir + "frame.clique.cnt"));
-		}
-		
-		long startTime=System.currentTimeMillis();   
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.res",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
 		
@@ -84,18 +63,20 @@ public class EnumClique {
 					SequenceFileOutputFormat.class,
 					null), opts);
 		}
-		System.out.println("End of Enumeration");
-		
-		long endTime = System.currentTimeMillis();
-		System.out.println(" " + (endTime - startTime) / 1000 + "s");
-		
+	}
+	
+	public static void countOnce(InputInfo inputInfo) throws Exception {
 		if (inputInfo.isCountPatternOnce) {
-			String[] opts2 = { workDir + "frame.clique.res", workDir + "frame.clique.cnt", 
+			String[] opts2 = { inputInfo.workDir + "frame.clique.res", inputInfo.workDir + "frame.clique.cnt", 
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices };
-			if(inputInfo.isCountOnly)
-				ToolRunner.run(conf, new GeneralPatternCountDriver(CliqueCountMapper1.class), opts2);
+			if (inputInfo.isCountOnly)
+				ToolRunner.run(new Configuration(),
+								new GeneralPatternCountDriver(
+										CliqueCountMapper1.class), opts2);
 			else
-				ToolRunner.run(conf, new GeneralPatternCountDriver(CliqueCountMapper2.class), opts2);	
+				ToolRunner.run(new Configuration(),
+								new GeneralPatternCountDriver(
+										CliqueCountMapper2.class), opts2);
 		}
 	}
 }

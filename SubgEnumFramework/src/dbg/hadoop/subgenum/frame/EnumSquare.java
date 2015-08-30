@@ -31,30 +31,11 @@ import dbg.hadoop.subgraphs.utils.Utility;
 
 @SuppressWarnings("deprecation")
 public class EnumSquare {
-	private static InputInfo inputInfo  = null;
 
-	public static void main(String[] args) throws Exception {
-		inputInfo = new InputInfo(args);
+	public static void run(InputInfo inputInfo) throws Exception {
 		String workDir = inputInfo.workDir;
 		int maxSize = inputInfo.maxSize;
-		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.square.res"))){
-			Utility.getFS().delete(new Path(workDir + "frame.square.res"));
-		}
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.square.cnt"))){
-			Utility.getFS().delete(new Path(workDir + "frame.square.cnt"));
-		}
-		
-		long startTime=System.currentTimeMillis();   
-		
+
 		if(!Utility.getFS().isDirectory(new Path(workDir + "nonsmallneigh"))){
 			String[] opts0 = { workDir + "adjList2.0", "", workDir + "nonsmallneigh",
 					inputInfo.numReducers, inputInfo.jarFile};
@@ -66,7 +47,6 @@ public class EnumSquare {
 					SequenceFileInputFormat.class, 
 					SequenceFileOutputFormat.class,
 					null), opts0);
-			System.out.println("End of Calculate non small neighborhood nodes");
 		}
 		
 		Configuration conf = new Configuration();
@@ -90,16 +70,16 @@ public class EnumSquare {
 						HVArray.class, LongWritable.class, //MapOutputKV
 						SequenceFileInputFormat.class, 
 						SequenceFileOutputFormat.class,
-						HVArrayComparator.class), opts);
-		System.out.println("End of Enumeration");
-
-		long endTime=System.currentTimeMillis();
-		System.out.println(" " + (endTime - startTime) / 1000 + "s");
-		
+						HVArrayComparator.class), opts);	
+	}
+	
+	public static void countOnce(InputInfo inputInfo) throws Exception{
 		if (inputInfo.isCountPatternOnce) {
-			String[] opts2 = { workDir + "frame.square.res", workDir + "frame.square.cnt", 
+			String[] opts2 = { inputInfo.workDir + "frame.square.res",
+					inputInfo.workDir + "frame.square.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(conf, new GeneralPatternCountDriver(SquareCountMapper.class), opts2);
+			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+					SquareCountMapper.class), opts2);
 		}
 	}
 	

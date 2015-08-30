@@ -4,40 +4,26 @@ import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import com.hadoop.compression.lzo.LzoCodec;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayComparator;
 import dbg.hadoop.subgraphs.io.HVArrayGroupComparator;
 import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.HVArraySignComparator;
-import dbg.hadoop.subgraphs.io.HyperVertexAdjList;
 import dbg.hadoop.subgraphs.utils.BinarySearch;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
@@ -46,66 +32,22 @@ import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class EnumHouse {
-	private static InputInfo inputInfo  = null;
 
 	@SuppressWarnings("deprecation")
-	public static void main(String[] args) throws Exception {
-		inputInfo = new InputInfo(args);
+	public static void run(InputInfo inputInfo) throws Exception {
 		String workDir = inputInfo.workDir;
-		int maxSize = inputInfo.maxSize;
-		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.tmp.1"))){
-			Utility.getFS().delete(new Path(workDir + "frame.house.tmp.1"));
-		}
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.tmp.2"))){
-			Utility.getFS().delete(new Path(workDir + "frame.house.tmp.2"));
-		}
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.res"))){
-			Utility.getFS().delete(new Path(workDir + "frame.house.res"));
-		}
-		if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.cnt"))){
-			Utility.getFS().delete(new Path(workDir + "frame.house.cnt"));
-		}
-		
-		long startTime=System.currentTimeMillis(); 
-		
 		Configuration conf = new Configuration();
-		DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/nonsmallneigh"), conf);
-		
-		conf.setInt("mapred.input.max.size", maxSize);
-		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
-		conf.setFloat("bloom.filter.false.positive.rate", inputInfo.falsePositive);
-		if(inputInfo.enableBF){
-			String bloomFilterFileName = "bloomFilter." + Config.TWINTWIG1 + "." + inputInfo.falsePositive;
-			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/" +
-					Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
-		}
-		
+
 		// Enumerate Square
-		String[] opts = { workDir + "adjList2." + maxSize, "", workDir + "frame.house.tmp.1", 
-				inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new GeneralDriver("Frame Square", 
-				EnumSquareMapper.class, 
-				EnumSquareReducer.class, 
-				HVArray.class, HVArray.class, //OutputKV
-				HVArray.class, LongWritable.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArrayComparator.class), opts);
+		if(!inputInfo.isSquareSkip){
+			EnumSquare.run(inputInfo);
+		}
 		
 		// Partition the square
 		conf.setBoolean("enum.house.square.partition", inputInfo.isSquarePartition);
 		if(inputInfo.isSquarePartition){
 			conf.setInt("enum.house.square.partition.thresh", inputInfo.squarePartitionThresh);
-			String[] opts1 = { workDir +  "frame.house.tmp.1", "", workDir + "frame.house.tmp.2", 
+			String[] opts1 = { workDir +  "frame.square.res", "", workDir + "frame.house.tmp.2", 
 					inputInfo.numReducers, inputInfo.jarFile };
 			ToolRunner.run(conf, new GeneralDriver("Frame Squre Partition", 
 					EnumHouseSquarePartMapper.class, 
@@ -117,7 +59,7 @@ public class EnumHouse {
 		}
 		
 		// Enumerate House
-		String[] opts2 = { workDir + "triangle.res", workDir + "frame.house.tmp.1",	
+		String[] opts2 = { workDir + "triangle.res", workDir + "frame.square.res",	
 				workDir + "frame.house.res", inputInfo.numReducers, inputInfo.jarFile };
 		if(inputInfo.isSquarePartition){
 			opts2[1] = workDir + "frame.house.tmp.2";
@@ -134,19 +76,17 @@ public class EnumHouse {
 				HVArraySignComparator.class, 
 				HVArrayGroupComparator.class), opts2);
 		
-		System.out.println("End of Enumeration");
-
-		long endTime=System.currentTimeMillis();
-		System.out.println(" " + (endTime - startTime) / 1000 + "s");
-		
-		if (inputInfo.isCountPatternOnce) {
-			String[] opts3 = { workDir + "frame.house.res", workDir + "frame.house.cnt", 
-					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(conf, new GeneralPatternCountDriver(HouseCountMapper.class), opts3);
-		}
-		
-		Utility.getFS().delete(new Path(workDir + "frame.house.tmp.1"));
 		Utility.getFS().delete(new Path(workDir + "frame.house.tmp.2"));
+	}
+	
+	public static void countOnce(InputInfo inputInfo) throws Exception{
+		if (inputInfo.isCountPatternOnce) {
+			String[] opts3 = { inputInfo.workDir + "frame.house.res",
+					inputInfo.workDir + "frame.house.cnt",
+					inputInfo.numReducers, inputInfo.jarFile };
+			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+					HouseCountMapper.class), opts3);
+		}
 	}
 }
 

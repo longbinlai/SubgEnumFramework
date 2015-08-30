@@ -3,7 +3,6 @@ package dbg.hadoop.subgenum.frame;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -17,43 +16,19 @@ import dbg.hadoop.subgraphs.io.HVArrayComparator;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
-import dbg.hadoop.subgraphs.utils.Utility;
-
 
 public class EnumChordalSquare {
-	public static InputInfo inputInfo  = null;
-	public static String workdir="";
-	public static String filename="";
 
-	@SuppressWarnings("deprecation")
-	public static void main(String[] args) throws Exception {
-		inputInfo = new InputInfo(args);
+	public static void run(InputInfo inputInfo) throws Exception {
+		//inputInfo = new InputInfo(args);
 		String workDir = inputInfo.workDir;
-		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
-		// Delete existed output
-		if (Utility.getFS().isDirectory(new Path(workDir + "frame.csquare.res"))) {
-			Utility.getFS().delete(new Path(workDir + "frame.csquare.res"));
-		}
-		if (Utility.getFS().isDirectory(new Path(workDir + "frame.csquare.cnt"))) {
-			Utility.getFS().delete(new Path(workDir + "frame.csquare.cnt"));
-		}
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
-
-		long startTime=System.currentTimeMillis();   
-			
+		
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.csquare.res",
 				inputInfo.numReducers, inputInfo.jarFile};
-		ToolRunner.run(new Configuration(), new GeneralDriver("Frame ChordalSquare", 
+		ToolRunner.run(conf, new GeneralDriver("Frame ChordalSquare", 
 				EnumChordalSquareMapper.class, 
 				EnumChordalSquareReducer.class, 
 			    HVArray.class, HVArray.class, //OutputKV
@@ -61,15 +36,15 @@ public class EnumChordalSquare {
 				SequenceFileInputFormat.class, 
 				SequenceFileOutputFormat.class,
 				HVArrayComparator.class), opts);
-		System.out.println("End of Enumeration");
-
-		long endTime = System.currentTimeMillis();
-		System.out.println(" " + (endTime - startTime) / 1000 + "s");
-		
+	}
+	
+	public static void countOnce(InputInfo inputInfo) throws Exception{
 		if (inputInfo.isCountPatternOnce && inputInfo.isResultCompression) {
-			String[] opts2 = { workDir + "frame.csquare.res", workDir + "frame.csquare.cnt", 
+			String[] opts2 = { inputInfo.workDir + "frame.csquare.res",
+					inputInfo.workDir + "frame.csquare.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(conf, new GeneralPatternCountDriver(ChordalSquareCountMapper.class), opts2);
+			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+					ChordalSquareCountMapper.class), opts2);
 		}
 	}
 }
@@ -109,8 +84,8 @@ class EnumChordalSquareReducer extends
 		else{
 			for(int i = 0; i < array.length - 1; ++i){
 				for(int j = i + 1; j < array.length; ++j){
-					long[] out = { array[i], _key.getFirst(), array[j], _key.getSecond() };
-					context.write(new HVArray(),new HVArray(out));
+					//long[] out = { array[i], _key.getFirst(), array[j], _key.getSecond() };
+					context.write(_key, new HVArray(array[i], array[j]));
 				}
 			}
 		}

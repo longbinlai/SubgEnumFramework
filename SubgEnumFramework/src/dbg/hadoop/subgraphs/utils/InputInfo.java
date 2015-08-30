@@ -1,5 +1,7 @@
 package dbg.hadoop.subgraphs.utils;
 
+import java.io.IOException;
+
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class InputInfo {
@@ -10,6 +12,7 @@ public class InputInfo {
 	public String jarFile = "run.jar";
 	public String workDir = "";
 	public String cliqueNumVertices = "4";
+	public String query = "square";
 	public long elemSize = 1L;
 	public int bfType = Config.EDGE;
 	public int maxSize = 0;
@@ -22,26 +25,34 @@ public class InputInfo {
 	public boolean isCountPatternOnce = false;
 	public boolean isResultCompression = true;
 	public boolean isSquarePartition = false;
+	public boolean isSquareSkip = false;
+	public boolean isChordalSquareSkip = false;
 	public int squarePartitionThresh = 2000;
 	
-	public InputInfo(String[] args){
+	public InputInfo(String[] args) throws IOException{
 		int valuePos = 0;
 		for (int i = 0; i < args.length; ++i) {
 			System.out.println("args[" + i + "] : " + args[i]);
-			if (args[i].contains("mapred.reduce.tasks")) {
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					numReducers = args[i].substring(valuePos);
-				}
-				assert(Integer.parseInt(numReducers) > 0);
-			}
-			else if(args[i].contains("mapred.input.file")){
+			if(args[i].contains("mapred.input.file")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					inputFilePath = args[i].substring(valuePos);
 				}
 				workDir = Utility.getWorkDir(inputFilePath);
-				FileName = Utility.getFileName(inputFilePath);
+				if (workDir.toLowerCase().contains("hdfs")) {
+					int pos = workDir.substring("hdfs://".length()).indexOf("/")
+							+ "hdfs://".length();
+					Utility.setDefaultFS(workDir.substring(0, pos));
+				} else {
+					Utility.setDefaultFS("");
+				}
+			}
+			else if (args[i].contains("mapred.reduce.tasks")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					numReducers = args[i].substring(valuePos);
+				}
+				assert(Integer.parseInt(numReducers) > 0);
 			}
 			else if(args[i].contains("graph.undirected")){
 				valuePos = args[i].lastIndexOf("=") + 1;
@@ -144,8 +155,25 @@ public class InputInfo {
 					squarePartitionThresh = Integer.parseInt(args[i].substring(valuePos));
 				}
 			}
+			else if (args[i].contains("enum.house.skip.square")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enum.solarsquare.skip.chordalsquare")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isChordalSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enum.query")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					query = args[i].substring(valuePos);
+				}
+			}
 		}
 	}
-	public InputInfo(){}
 
 }
