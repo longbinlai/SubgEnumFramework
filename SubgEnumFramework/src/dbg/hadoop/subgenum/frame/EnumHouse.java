@@ -4,13 +4,9 @@ import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -20,7 +16,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.io.HVArray;
-import dbg.hadoop.subgraphs.io.HVArrayComparator;
 import dbg.hadoop.subgraphs.io.HVArrayGroupComparator;
 import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.HVArraySignComparator;
@@ -29,11 +24,9 @@ import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
-import dbg.hadoop.subgraphs.utils.Utility;
 
 public class EnumHouse {
 
-	@SuppressWarnings("deprecation")
 	public static void run(InputInfo inputInfo) throws Exception {
 		String workDir = inputInfo.workDir;
 		Configuration conf = new Configuration();
@@ -46,23 +39,15 @@ public class EnumHouse {
 		// Partition the square
 		conf.setBoolean("enum.house.square.partition", inputInfo.isSquarePartition);
 		if(inputInfo.isSquarePartition){
-			conf.setInt("enum.house.square.partition.thresh", inputInfo.squarePartitionThresh);
-			String[] opts1 = { workDir +  "frame.square.res", "", workDir + "frame.house.tmp.2", 
-					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(conf, new GeneralDriver("Frame Squre Partition", 
-					EnumHouseSquarePartMapper.class, 
-					EnumHouseSquarePartReducer.class, 
-					HVArray.class, HVArray.class, //OutputKV
-					SequenceFileInputFormat.class, 
-					SequenceFileOutputFormat.class,
-					HVArrayComparator.class), opts1);
+			GeneralPartitioner.run(workDir + "frame.square.res", inputInfo.squarePartitionThresh, 
+					inputInfo.numReducers, inputInfo.jarFile);
 		}
 		
 		// Enumerate House
 		String[] opts2 = { workDir + "triangle.res", workDir + "frame.square.res",	
 				workDir + "frame.house.res", inputInfo.numReducers, inputInfo.jarFile };
 		if(inputInfo.isSquarePartition){
-			opts2[1] = workDir + "frame.house.tmp.2";
+			opts2[1] = workDir + "frame.square.res.part";
 		}
 		ToolRunner.run(conf, new GeneralDriver("Frame House", 
 				EnumHouseTriangleMapper.class,
@@ -76,7 +61,7 @@ public class EnumHouse {
 				HVArraySignComparator.class, 
 				HVArrayGroupComparator.class), opts2);
 		
-		Utility.getFS().delete(new Path(workDir + "frame.house.tmp.2"));
+		//Utility.getFS().delete(new Path(workDir + "frame.square.res.part"));
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
@@ -86,44 +71,6 @@ public class EnumHouse {
 					inputInfo.numReducers, inputInfo.jarFile };
 			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					HouseCountMapper.class), opts3);
-		}
-	}
-}
-
-class EnumHouseSquarePartMapper extends
-	Mapper<HVArray, HVArray, HVArray, HVArray>{
-	
-	private static Random rand = null;
-	private static int squarePartThresh = 2000;
-	
-	@Override
-	public void map(HVArray _key, HVArray _value, Context context) 
-		throws IOException, InterruptedException {
-		ArrayList<long[]> arrayPartitioner = Utility.partArray(_value.toArrays(), squarePartThresh);
-		for(int i = 0; i < arrayPartitioner.size(); ++i){
-			context.write(new HVArray(_key.getFirst(), _key.getSecond(), rand.nextLong()), 
-					new HVArray(arrayPartitioner.get(i), null));
-			for(int j = i + 1; j < arrayPartitioner.size(); ++j){
-				context.write(new HVArray(_key.getFirst(), _key.getSecond(), rand.nextLong()), 
-						new HVArray(arrayPartitioner.get(i), arrayPartitioner.get(j)));
-			}
-		}
-	}
-
-	@Override
-	public void setup(Context context){
-		squarePartThresh = context.getConfiguration().getInt("enum.house.square.partition.thresh", 2000);
-		rand = new Random(System.currentTimeMillis());
-	}
-}
-
-class EnumHouseSquarePartReducer extends
-		Reducer<HVArray, HVArray, HVArray, HVArray> {
-	@Override
-	public void reduce(HVArray key, Iterable<HVArray> values,
-			Context context) throws IOException, InterruptedException {
-		for (HVArray val : values) {
-			context.write(new HVArray(key.getFirst(), key.getSecond()), val);
 		}
 	}
 }

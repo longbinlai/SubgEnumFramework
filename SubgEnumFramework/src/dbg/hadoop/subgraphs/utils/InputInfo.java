@@ -24,10 +24,12 @@ public class InputInfo {
 	public boolean isCountOnly = true;
 	public boolean isCountPatternOnce = false;
 	public boolean isResultCompression = true;
-	public boolean isSquarePartition = false;
 	public boolean isSquareSkip = false;
 	public boolean isChordalSquareSkip = false;
+	public boolean isSquarePartition = false;
+	public boolean isChordalSquarePartition = false;
 	public int squarePartitionThresh = 2000;
+	public int chordalSquarePartitionThresh = 2000;
 	
 	public InputInfo(String[] args) throws IOException{
 		int valuePos = 0;
@@ -45,6 +47,12 @@ public class InputInfo {
 					Utility.setDefaultFS(workDir.substring(0, pos));
 				} else {
 					Utility.setDefaultFS("");
+				}
+			}
+			else if (args[i].contains("enum.query")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					query = args[i].substring(valuePos);
 				}
 			}
 			else if (args[i].contains("mapred.reduce.tasks")) {
@@ -143,6 +151,7 @@ public class InputInfo {
 					isResultCompression = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
+			// House Enumeration specific settings
 			else if (args[i].contains("enum.house.square.partition=")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
@@ -161,16 +170,23 @@ public class InputInfo {
 					isSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
+			// Solar Square Enumeration specific settings
+			else if (args[i].contains("enum.solarsquare.chordalsquare.partition=")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isChordalSquarePartition = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("enum.solarsquare.chordalsquare.partition.thresh=")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					chordalSquarePartitionThresh = Integer.parseInt(args[i].substring(valuePos));
+				}
+			}
 			else if (args[i].contains("enum.solarsquare.skip.chordalsquare")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isChordalSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
-				}
-			}
-			else if (args[i].contains("enum.query")){
-				valuePos = args[i].lastIndexOf("=") + 1;
-				if (valuePos != 0) {
-					query = args[i].substring(valuePos);
 				}
 			}
 		}

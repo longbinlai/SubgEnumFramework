@@ -80,8 +80,8 @@ public class MainEntry{
 					Utility.getFS().delete(new Path(workDir + "frame.square.res"));
 				}
 			}
-			if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.tmp.2"))){
-				Utility.getFS().delete(new Path(workDir + "frame.house.tmp.2"));
+			if(Utility.getFS().isDirectory(new Path(workDir + "frame.square.res.part"))){
+				Utility.getFS().delete(new Path(workDir + "frame.square.res.part"));
 			}
 			if(Utility.getFS().isDirectory(new Path(workDir + "frame.house.res"))){
 				Utility.getFS().delete(new Path(workDir + "frame.house.res"));
@@ -106,6 +106,9 @@ public class MainEntry{
 				if (Utility.getFS().isDirectory(new Path(workDir + "frame.csquare.res"))) {
 					Utility.getFS().delete(new Path(workDir + "frame.csquare.res"));
 				}
+			}
+			if (Utility.getFS().isDirectory(new Path(workDir + "frame.csquare.res.part"))) {
+				Utility.getFS().delete(new Path(workDir + "frame.csquare.res.part"));
 			}
 			if (Utility.getFS().isDirectory(new Path(workDir + "frame.solarsquare.res"))) {
 				Utility.getFS().delete(new Path(workDir + "frame.solarsquare.res"));

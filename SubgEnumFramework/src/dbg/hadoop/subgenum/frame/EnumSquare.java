@@ -171,8 +171,7 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 					long v2 = array1[j];
 					if (enableBF) {
 						isOutput = bloomfilterOpr.get().test(
-								HyperVertex.VertexID(v1),
-								HyperVertex.VertexID(v2));
+								HyperVertex.VertexID(v1), HyperVertex.VertexID(v2));
 					}
 					if(isOutput){
 						context.write(new HVArray(v1, v2), _key);
@@ -187,8 +186,7 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 					long v2 = array2[j];
 					if (enableBF) {
 						isOutput = bloomfilterOpr.get().test(
-								HyperVertex.VertexID(v1),
-								HyperVertex.VertexID(v2));
+								HyperVertex.VertexID(v1), HyperVertex.VertexID(v2));
 					}
 					if(isOutput){
 						context.write(new HVArray(v1, v2), _key);
