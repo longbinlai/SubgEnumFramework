@@ -7,7 +7,7 @@ import java.io.IOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import dbg.hadoop.subgraphs.utils.MaxHeap;
+//import dbg.hadoop.subgraphs.utils.MaxHeap;
 
 /**
  * @author robeen
@@ -24,7 +24,8 @@ public class AdjListLimitSizeWritable implements WritableComparable, Writable{
 		this.smallDegreeVerticesGroup1 = new int[0];
 		this.largeDegreeVertices = new int[0];
 	}
-	
+
+	/*
 	public AdjListLimitSizeWritable(MaxHeap large) throws Exception{	
 		this.smallDegreeVerticesGroup0 = new int[0];
 		this.smallDegreeVerticesGroup1 = new int[0];
@@ -42,7 +43,7 @@ public class AdjListLimitSizeWritable implements WritableComparable, Writable{
 			this.largeDegreeVertices = large.getPartialArrays(1, large.size() + 1);
 		}
 
-	}
+	}*/
 	
 	public AdjListLimitSizeWritable(int[] smallGroup0, int[] smallGroup1) throws Exception{
 		this.smallDegreeVerticesGroup0 = smallGroup0;

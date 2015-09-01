@@ -1,56 +1,30 @@
 package dbg.hadoop.subgraphs.utils;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-
-import org.apache.hadoop.io.Writable;
-
-
-public class MaxHeap implements Writable{
-	private int length;
+@SuppressWarnings({ "unchecked", "rawtypes" })
+public class MaxHeap <T extends Comparable> {
+	private int size;
 	private int heapSize;
-	/**
-	 * The arrays should be indexed with 1
-	 */
 	
-	private int[] arrays;
+	private T[] arrays;
 	
-	public MaxHeap(MaxHeap other){
-		this.length = this.heapSize = other.size();
-		int otherArray[] = other.toArrays();
+	public MaxHeap(MaxHeap<T> other){
+		this.size = this.heapSize = other.size();
+		T otherArray[] = other.toArray();
 		int l = otherArray.length;
-		this.arrays = new int[l];
-		for(int i = 0; i < l; ++i){
-			this.arrays[i] = otherArray[i];
-		}
+		this.arrays = (T[])new Comparable[l];
+		System.arraycopy(otherArray, 0, this.arrays, 0, l);
 	}
 	
-	public MaxHeap(int[] inputArrays){
-		if (inputArrays[0] != -1) {
-			length = inputArrays.length;
-			this.arrays = new int[length + 1];
-			this.arrays[0] = -1; // We would not use it
-			for (int i = 0; i < this.length; ++i) {
-				arrays[i + 1] = inputArrays[i];
-			}
-		}
-		else{
-			length = inputArrays.length - 1;;
-			this.arrays = inputArrays;
-		}
-		heapSize = length;
+	public MaxHeap(T[] array){
+		this.size = this.heapSize = array.length;
+		this.arrays = (T[])new Comparable[this.size];
+		System.arraycopy(array, 0, this.arrays, 0, this.size);
+		this.buildMaxHeap();
 	}
-	
 	
 	public MaxHeap(int initialSize){
 		init(initialSize);
 	}
-	
 	
 	/**
 	 * Max heap should satisfy that A[parent[i]] >= A[i]
@@ -62,10 +36,10 @@ public class MaxHeap implements Writable{
 		int l = left(i);
 		int r = right(i);
 		int largest = i;
-		if(l <= heapSize && Utility.compareVertex(arrays[i], arrays[l]) < 0){
+		if(l < heapSize && arrays[i].compareTo(arrays[l]) < 0){
 			largest = l;
 		}
-		if(r <= heapSize && Utility.compareVertex(arrays[largest], arrays[r]) < 0){
+		if(r < heapSize && arrays[largest].compareTo(arrays[r]) < 0){
 			largest = r;
 		}
 		if(largest != i){
@@ -75,7 +49,7 @@ public class MaxHeap implements Writable{
 	}
 	
 	public void buildMaxHeap(){
-		for(int i = length / 2; i >=1; --i){
+		for(int i = size / 2; i >= 0; --i){
 			maxHeapify(i);
 		}
 	}
@@ -85,61 +59,47 @@ public class MaxHeap implements Writable{
 	 */
 	public void sort(){
 		buildMaxHeap();
-		for(int i = length; i >= 2; --i){
-			swap(1, i);
+		for(int i = size - 1; i > 0; --i){
+			swap(0, i);
 			heapSize -= 1;
-			maxHeapify(1);
+			maxHeapify(0);
 		}
-		this.heapSize = this.length;
+		this.heapSize = this.size;
 	}
 	
-	public void printArray(){
-		System.out.print("arrays: { ");
-		for(int i = 1; i <= length; ++i){
-			System.out.print(arrays[i] + ",");
-		}
-		System.out.println("} ");
-	}
-	
-	public static void printArray(int[] inputs){
-		System.out.print("inputs: { ");
-		for(int i = 0; i < inputs.length; ++i){
-			System.out.print(inputs[i] + ",");
-		}
-		System.out.println("} ");
-	}
 	
 	private void swap(int srcIndex, int dstIndex){
-		int tmp = arrays[srcIndex];
+		T tmp = arrays[srcIndex];
 		arrays[srcIndex] = arrays[dstIndex];
 		arrays[dstIndex] = tmp;
 	}
 	
 	private int left(int i){
-		return (i << 1);
+		return ((i << 1) | 1);
 	}
 	
 	private int right(int i){
-		return (i << 1 | 0x1);
+		return ((i << 1) + 2);
 	}
 	
 	private int parent(int i){
-		return (i >> 1);
+		return ((i - 1) >> 1);
 	}
 	
 	private void resize() {
-		int[] newArrays = new int[arrays.length << 1];
-		for (int i = 0; i < arrays.length; ++i)
-			newArrays[i] = arrays[i];
+		T[] newArrays = (T[])new Comparable[arrays.length << 1];
+		//for (int i = 0; i < arrays.length; ++i)
+		//	newArrays[i] = arrays[i];
+		System.arraycopy(this.arrays, 0, newArrays, 0, arrays.length);
 		arrays = newArrays;
 	}
 	
 	public boolean isEmpty() {
-		return (this.length == 0);
+		return (this.size == 0);
 	}
 	
 	public int size(){
-		return this.length;
+		return this.size;
 	}
 	
 	/**
@@ -149,42 +109,22 @@ public class MaxHeap implements Writable{
 	 * resize the array to twice larger of its previous space.
 	 * @param k
 	 */
-	public void insert(int k) {
-		if (size() == arrays.length - 1){
+	public void insert(T k) {
+		if (this.size == arrays.length){
 			resize();
 		}
-		arrays[length + 1] = k;
-		int i = length + 1;
-		while (i != 1 && Utility.compareVertex(arrays[i], arrays[parent(i)]) > 0) {
+		arrays[size] = k;
+		int i = size;
+		while (i != 0 && arrays[i].compareTo(arrays[parent(i)]) > 0) {
 			swap(i, parent(i));
 			i = parent(i);
 		}
-		++length;
+		++size;
 		++heapSize;
 	}
 	
-	public int getFirst(){
-		return this.arrays[1];
-	}
-	
-	@Override
-	public void readFields(DataInput in) throws IOException{
-		this.length = in.readInt();
-		this.heapSize = this.length;
-		this.arrays = new int[this.length + 1];
-		this.arrays[0] = -1; // For consistent
-		for(int i = 1; i <= length; ++i){
-			this.arrays[i] = in.readInt();
-		}
-	}
-
-	@Override
-	public void write(DataOutput out) throws IOException {
-		// TODO Auto-generated method stub
-		out.writeInt(this.length);
-		for(int i = 1; i <= this.length; ++i){
-			out.writeInt(arrays[i]);
-		}
+	public T getFirst(){
+		return this.arrays[0];
 	}
 	
 	@Override
@@ -193,14 +133,16 @@ public class MaxHeap implements Writable{
 		if(this.isEmpty()){
 			return res;
 		}
-		for(int i = 1; i <= length; ++i){
+		for(int i = 0; i < size; ++i){
 			res += (arrays[i] + ",");
 		}
 		return res.substring(0, res.length() - 1);
 	}
 	
-	public int[] toArrays(){
-		return this.arrays;
+	public T[] toArray(){
+		T[] res = (T[])new Comparable[this.size];
+		System.arraycopy(this.arrays, 0, res, 0, this.size);
+		return res;
 	}
 	
 	/**
@@ -209,30 +151,28 @@ public class MaxHeap implements Writable{
 	 * @param to
 	 * @return
 	 */
-	public int[] getPartialArrays(int from, int to){
-		int length = to - from;
-		if(length <= 0 || from < 0 || to > this.length + 1){
-			return new int[0];
+	public long[] getPartialArrays(int from, int to){
+		int len = to - from;
+		if(len <= 0 || from < 0 || to > this.size){
+			return new long[0];
 		}
 		else{
-			int[] newArray = new int[length];
-			System.arraycopy(arrays, from, newArray, 0, length);
+			long[] newArray = new long[len];
+			System.arraycopy(arrays, from, newArray, 0, len);
 			return newArray;
 		}
 	}
 	
 	public void init(int initialSize){
-		this.arrays = new int[initialSize + 1];
-		arrays[0] = -1;
-		this.length = 0;
+		this.arrays = (T[])new Comparable[initialSize];
+		this.size = 0;
 		this.heapSize = 0;
-	}
-	
-	public int binarySearch(int key){
-		return Arrays.binarySearch(this.arrays, key);
 	}
 	
 	public void clear(){
 		this.arrays = null;
+		this.arrays = (T[])new Comparable[Config.HEAPINITSIZE];
+		this.size = 0;
+		this.heapSize = 0;
 	}
 }

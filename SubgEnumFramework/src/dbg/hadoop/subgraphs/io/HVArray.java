@@ -10,7 +10,7 @@ import org.apache.hadoop.io.WritableComparable;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
 
 
-public class HVArray implements WritableComparable, Writable{
+public class HVArray implements WritableComparable, Writable {
 	protected long[] hyperVertexArray;
 	protected int length = 0;
 	protected int pos = 0;
@@ -270,5 +270,4 @@ public class HVArray implements WritableComparable, Writable{
 		}
 		return sum;
 	}
-	
 }

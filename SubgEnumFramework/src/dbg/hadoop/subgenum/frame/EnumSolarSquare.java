@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -29,9 +30,7 @@ public class EnumSolarSquare{
 	
 	public static void run(InputInfo inputInfo) throws Exception{
 		String workDir = inputInfo.workDir;
-		if(!inputInfo.isChordalSquareSkip){
-			EnumChordalSquare.run(inputInfo);
-		}
+		
 		Configuration conf = new Configuration();
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
 		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
@@ -46,6 +45,10 @@ public class EnumSolarSquare{
 		if(inputInfo.isChordalSquarePartition && inputInfo.isResultCompression){
 			GeneralPartitioner.run(workDir + "frame.csquare.res", inputInfo.chordalSquarePartitionThresh, 
 					inputInfo.numReducers, inputInfo.jarFile);
+		}
+		
+		if(!inputInfo.isChordalSquareSkip){
+			EnumChordalSquare.run(inputInfo);
 		}
 
 		String[] opts = { workDir + "frame.csquare.res", "", workDir + "frame.solarsquare.res", 
@@ -88,16 +91,10 @@ class EnumSolarSquareMapper extends
 			Context context) throws IOException, InterruptedException {
 		boolean isOutput = true;
 		if(!isCompress){
-			if(enableBF){
-				isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(_value.getFirst()), 
-						HyperVertex.VertexID(_value.getSecond()));
-			}
-			if(isOutput){
-				context.write(new HVArray(_key.getFirst(), _value.getFirst(), _value.getSecond()),
-					new LongWritable(_key.getSecond()));
-				context.write(new HVArray(_key.getSecond(), _value.getFirst(), _value.getSecond()),
-					new LongWritable(_key.getFirst()));
-			}
+			context.write(new HVArray(_key.getFirst(), _value.getFirst(), _value.getSecond()),
+				new LongWritable(_key.getSecond()));
+			context.write(new HVArray(_key.getSecond(), _value.getFirst(), _value.getSecond()),
+				new LongWritable(_key.getFirst()));
 		} else {
 			if(!isPart)
 				this.processCompressChordalSquare(_key, _value.toArrays(), context);
@@ -159,7 +156,7 @@ class EnumSolarSquareMapper extends
 		isPart = conf.getBoolean("enum.solarsquare.chordalsquare.partition", false);
 		enableBF = conf.getBoolean("enable.bloom.filter", false);
 		try {
-			if (enableBF && bloomfilterOpr == null) {
+			if (enableBF && isCompress && bloomfilterOpr == null) {
 				bloomfilterOpr = new BloomFilterOpr(conf.getFloat(
 						"bloom.filter.false.positive.rate", (float) 0.001), Config.TWINTWIG1);
 				bloomfilterOpr.obtainBloomFilter(conf);

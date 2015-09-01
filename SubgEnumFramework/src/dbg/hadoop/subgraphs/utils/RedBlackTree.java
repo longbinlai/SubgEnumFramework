@@ -215,35 +215,5 @@ public class RedBlackTree< Key, Value > extends BinarySearchTree< Key, Value > {
         protected static < Key, Value > void setColor( RedBlackNode< Key, Value > p, NodeColor c ) {
                 if ( p != null ) p.setColor( c );
         }
-        
-        public static void main(String[] args){
-        	/*
-        	RedBlackTree<Integer, ArrayList<Integer>> map = new RedBlackTree<Integer, ArrayList<Integer>>(); 
-        	Node<Integer, ArrayList<Integer>> key;
-    		for(int i = 0; i < 1000000; ++i){
-    			//map.insert(i, 0);
-    			if((key = map.getNode(i)) == null){
-    				ArrayList<Integer> list = map.insert(i, new ArrayList());
-    				for(int j = 0; j < 500; ++j){
-    					list.add(j);
-    				}
-    			}
-    			else{
-    				for(int j = 0; j < 500; ++j){
-    					key.getValue().add(j);
-    				}
-    			}
-    			
-    			
-    		}*/
-        	Map<Integer, ArrayList<Integer>> map = new HashMap<Integer, ArrayList<Integer>>();
-        	for(int i = 0; i < 1000000; ++i){
-        		map.put(i, new ArrayList<Integer>());
-        		for(int j = 0; j < 500; ++j){
-        			map.get(i).add(j);
-        		}
-        	}
-    		Utility.printMemoryUsage();
-        }
 }
 

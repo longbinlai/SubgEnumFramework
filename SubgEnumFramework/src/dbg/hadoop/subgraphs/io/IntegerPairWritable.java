@@ -8,7 +8,7 @@ import java.util.List;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import dbg.hadoop.subgraphs.utils.MaxHeap;
+//import dbg.hadoop.subgraphs.utils.MaxHeap;
 
 
 public class IntegerPairWritable implements WritableComparable, Writable{
@@ -129,12 +129,6 @@ public class IntegerPairWritable implements WritableComparable, Writable{
 		for(int i = 0; i < this.length; ++i){
 			this.integerPair[i] = list.get(i);
 		}
-	}
-	
-	public IntegerPairWritable(MaxHeap heap){
-		this.length = heap.size();
-		this.integerPair = new int[this.length];
-		System.arraycopy(heap.toArrays(), 1, this.integerPair, 0, this.length);
 	}
 	
 	public void set(int[] integerList){

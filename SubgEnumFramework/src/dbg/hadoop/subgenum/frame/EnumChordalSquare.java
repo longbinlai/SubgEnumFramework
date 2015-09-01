@@ -1,19 +1,24 @@
 package dbg.hadoop.subgenum.frame;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayComparator;
+import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
+import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
@@ -25,6 +30,12 @@ public class EnumChordalSquare {
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
+		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
+		if(inputInfo.enableBF){
+			String bloomFilterFileName = "bloomFilter." + Config.TWINTWIG1 + "." + inputInfo.falsePositive;
+			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/" +
+					Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
+		}
 		
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.csquare.res",
 				inputInfo.numReducers, inputInfo.jarFile};
@@ -69,6 +80,8 @@ class EnumChordalSquareReducer extends
 	
 	private static HyperVertexHeap heap = null;
 	private static boolean isResultCompression = true;
+	private static boolean enableBF = false;
+	private static BloomFilterOpr bloomfilterOpr = null;
 	
 	@Override
 	public void reduce(HVArray _key, Iterable<LongWritable> values,
@@ -79,13 +92,20 @@ class EnumChordalSquareReducer extends
 		}  
 		heap.sort();
 		long[] array = heap.toArrays();
+		boolean isOutput = true;
 		if(isResultCompression)
 			context.write(_key, new HVArray(array));
 		else{
 			for(int i = 0; i < array.length - 1; ++i){
 				for(int j = i + 1; j < array.length; ++j){
 					//long[] out = { array[i], _key.getFirst(), array[j], _key.getSecond() };
-					context.write(_key, new HVArray(array[i], array[j]));
+					// Bloomfilter only used in the enumeration of solar square
+					if(enableBF){
+						isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(array[i]), 
+								HyperVertex.VertexID(array[j]));
+					}
+					if(isOutput)
+						context.write(_key, new HVArray(array[i], array[j]));
 				}
 			}
 		}
@@ -93,9 +113,24 @@ class EnumChordalSquareReducer extends
 	
 	@Override
 	public void setup(Context context) {
+		Configuration conf = context.getConfiguration();
 		heap = new HyperVertexHeap(Config.HEAPINITSIZE);
-		isResultCompression = context.getConfiguration().getBoolean(
+		isResultCompression = conf.getBoolean(
 				"result.compression", true);
+		enableBF = conf.getBoolean("enable.bloom.filter", false);
+		try {
+			if (enableBF && bloomfilterOpr == null) {
+				bloomfilterOpr = new BloomFilterOpr(conf.getFloat(
+						"bloom.filter.false.positive.rate", (float) 0.001), Config.TWINTWIG1);
+				bloomfilterOpr.obtainBloomFilter(conf);
+			}
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
 	}
 	
 	@Override

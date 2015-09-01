@@ -126,5 +126,22 @@ public class MainEntry{
 			
 			EnumSolarSquare.countOnce(inputInfo);
 		}
+		// Twin Triangle is q6
+		else if (query.compareTo("twintriangle") == 0 || query.compareTo("q6") == 0) {
+			if (Utility.getFS().isDirectory(new Path(workDir + "frame.twintriangle.res"))) {
+				Utility.getFS().delete(new Path(workDir + "frame.twintriangle.res"));
+			}
+			if (Utility.getFS().isDirectory(new Path(workDir + "frame.twintriangle.cnt"))) {
+				Utility.getFS().delete(new Path(workDir + "frame.twintriangle.cnt"));
+			}
+			log.info("Start enumerating twin triangle...");
+			startTime = System.currentTimeMillis();
+			
+			EnumTwinTriangle.run(inputInfo);
+			
+			endTime=System.currentTimeMillis();
+			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			EnumTwinTriangle.countOnce(inputInfo);
+		}
 	}
 }

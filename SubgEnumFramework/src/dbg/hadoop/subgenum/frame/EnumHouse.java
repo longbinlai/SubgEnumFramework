@@ -60,8 +60,7 @@ public class EnumHouse {
 				SequenceFileOutputFormat.class,
 				HVArraySignComparator.class, 
 				HVArrayGroupComparator.class), opts2);
-		
-		//Utility.getFS().delete(new Path(workDir + "frame.square.res.part"));
+
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{

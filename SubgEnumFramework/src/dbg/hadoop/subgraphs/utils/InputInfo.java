@@ -19,7 +19,7 @@ public class InputInfo {
 	public int cliqueSizeThresh = 0;
 	public float falsePositive = (float) 0.001;
 	public boolean isUndirected = false;
-	public boolean enableBF = false;
+	public boolean enableBF = true;
 	public boolean isHyper = false;
 	public boolean isCountOnly = true;
 	public boolean isCountPatternOnce = false;
@@ -34,11 +34,12 @@ public class InputInfo {
 	public InputInfo(String[] args) throws IOException{
 		int valuePos = 0;
 		for (int i = 0; i < args.length; ++i) {
-			System.out.println("args[" + i + "] : " + args[i]);
+			//System.out.println("args[" + i + "] : " + args[i]);
 			if(args[i].contains("mapred.input.file")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					inputFilePath = args[i].substring(valuePos);
+					System.out.println("mapred.input.file: " + inputFilePath);
 				}
 				workDir = Utility.getWorkDir(inputFilePath);
 				if (workDir.toLowerCase().contains("hdfs")) {
@@ -53,6 +54,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					query = args[i].substring(valuePos);
+					System.out.println("enum.query: " + query);
 				}
 			}
 			else if (args[i].contains("mapred.reduce.tasks")) {
@@ -91,6 +93,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					elemSize = Long.parseLong(args[i].substring(valuePos));
+					System.out.println("bloom.filter.element.size: " + elemSize);
 				}
 				assert(elemSize > 1);
 			}
@@ -98,6 +101,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					bfType = Integer.parseInt(args[i].substring(valuePos));
+					System.out.println("bloom.filter.type: " + bfType);
 				}
 				assert(bfType == Config.EDGE || bfType == Config.TWINTWIG1);
 			}
@@ -105,6 +109,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					enableBF = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("enable.bloom.filter: " + enableBF);
 				}
 			}
 			else if (args[i].contains("clique.number.vertices")) {
@@ -130,18 +135,21 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isCountOnly = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("count.only: " + isCountOnly);
 				}
 			}
 			else if (args[i].contains("count.pattern.once")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isCountPatternOnce = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("count.pattern.once: " + isCountPatternOnce);
 				}
 			}
 			else if(args[i].contains("map.input.max.size")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					maxSize = Integer.valueOf(args[i].substring(valuePos));
+					System.out.println("map.input.max.size: " + maxSize);
 				}
 				assert(maxSize > 0);
 			}
@@ -149,6 +157,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isResultCompression = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("result.compression: " + isResultCompression);
 				}
 			}
 			// House Enumeration specific settings
@@ -156,18 +165,21 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isSquarePartition = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("enum.house.square.partition: " + isSquarePartition);
 				}
 			}
 			else if (args[i].contains("enum.house.square.partition.thresh=")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					squarePartitionThresh = Integer.parseInt(args[i].substring(valuePos));
+					System.out.println("enum.house.square.partition.thresh: " + squarePartitionThresh);
 				}
 			}
-			else if (args[i].contains("enum.house.skip.square")){
+			else if (args[i].contains("skip.square")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("skip.square: " + isSquareSkip);
 				}
 			}
 			// Solar Square Enumeration specific settings
@@ -175,18 +187,22 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isChordalSquarePartition = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("enum.solarsquare.chordalsquare.partition: " + isChordalSquarePartition);
 				}
 			}
 			else if (args[i].contains("enum.solarsquare.chordalsquare.partition.thresh=")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					chordalSquarePartitionThresh = Integer.parseInt(args[i].substring(valuePos));
+					System.out.println("enum.solarsquare.chordalsquare.partition.thresh: " + 
+							chordalSquarePartitionThresh);
 				}
 			}
-			else if (args[i].contains("enum.solarsquare.skip.chordalsquare")){
+			else if (args[i].contains("skip.chordalsquare")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isChordalSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("skip.chordalsquare: " + isChordalSquareSkip);
 				}
 			}
 		}
