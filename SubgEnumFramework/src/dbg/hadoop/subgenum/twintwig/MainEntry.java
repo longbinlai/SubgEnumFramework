@@ -29,19 +29,22 @@ public class MainEntry{
 			log.info("[TwinTwig-chordalsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 		}
 		// k-clique is query: q3
-		else if (query.compareTo("4clique") == 0) {
-			log.info("TwinTwig: Start enumerating 4-clique...");
+		else if (query.compareTo("clique") == 0) {
+			int k = Integer.parseInt(inputInfo.cliqueNumVertices);
+			log.info("TwinTwig: Start enumerating " + k + "clique...");
 			startTime = System.currentTimeMillis();
-			FourClique.run(inputInfo);
+			if(k == 4) {
+				FourClique.run(inputInfo);
+			}
+			else if(k == 5){
+				FiveClique.run(inputInfo);
+			}
+			else {
+				System.err.println("Specify invalid clique size: " + k);
+				System.exit(0);
+			}
 			endTime=System.currentTimeMillis();
 			log.info("[TwinTwig-4Clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
-		}
-		else if (query.compareTo("5clique") == 0) {
-			log.info("TwinTwig: Start enumerating 5-clique...");
-			startTime = System.currentTimeMillis();
-			FiveClique.run(inputInfo);
-			endTime=System.currentTimeMillis();
-			log.info("[TwinTwig-5Clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 		}
 		// House is query: q4
 		else if (query.compareTo("house") == 0 || query.compareTo("q4") == 0) {

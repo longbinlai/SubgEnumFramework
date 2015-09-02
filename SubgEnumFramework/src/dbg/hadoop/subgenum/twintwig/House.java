@@ -48,7 +48,7 @@ public class House{
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
 		boolean enableBloomFilter = inputInfo.enableBF;
-		double bfProbFP = inputInfo.falsePositive;
+		float bfProbFP = inputInfo.falsePositive;
 		int maxSize = inputInfo.maxSize;
 		String workDir = inputInfo.workDir;
 		

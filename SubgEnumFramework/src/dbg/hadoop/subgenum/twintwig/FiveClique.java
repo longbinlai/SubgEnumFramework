@@ -48,7 +48,7 @@ public class FiveClique{
 	
 	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
-		double falsePositive = inputInfo.falsePositive;
+		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
 		boolean isHyper = inputInfo.isHyper;
 		
