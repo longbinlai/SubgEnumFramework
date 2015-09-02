@@ -40,9 +40,12 @@ import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class FourClique{
-	private static InputInfo inputInfo = null;
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+	
+	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
 		double falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
@@ -67,6 +70,10 @@ public class FourClique{
 		
 		String stageOneOutput = workDir + "tt.4clique.tmp.1";
 		String stageTwoOutput = workDir + "tt.4clique.res";
+		
+		Utility.getFS().delete(new Path(stageOneOutput));
+		Utility.getFS().delete(new Path(stageTwoOutput));
+		
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);
 		conf.setFloat("bloom.filter.false.positive.rate", (float)falsePositive);

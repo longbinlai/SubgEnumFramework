@@ -42,9 +42,12 @@ import com.hadoop.compression.lzo.LzoCodec;
 
 
 public class ChordalSquare{
-	private static InputInfo inputInfo = null;
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+
+	public static void run(InputInfo inputInfo) throws Exception{
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
@@ -78,6 +81,13 @@ public class ChordalSquare{
 		
 		String stageOneOutput = workDir + "tt.csquare.tmp.1";
 		String stageTwoOutput = workDir + "tt.csquare.res";
+		
+		if(Utility.getFS().isDirectory(new Path(stageOneOutput))){
+			Utility.getFS().delete(new Path(stageOneOutput));
+		}
+		if(Utility.getFS().isDirectory(new Path(stageTwoOutput))){
+			Utility.getFS().delete(new Path(stageTwoOutput));
+		}
 		
 		String[] opts = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new ChordalSquareStageOneDriver(), opts);

@@ -32,10 +32,12 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 @SuppressWarnings("deprecation")
 public class SolarSquare{
-	private static InputInfo inputInfo = null;
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
 
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	public static void run(InputInfo inputInfo) throws Exception{
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
@@ -60,6 +62,10 @@ public class SolarSquare{
 		String stageOneOutput = workDir + "tt.solarsquare.tmp.1";
 		String stageTwoOutput = workDir + "tt.solarsquare.tmp.2";
 		String stageThreeOutput = workDir + "tt.solarsquare.res";
+		
+		Utility.getFS().delete(new Path(stageOneOutput));
+		Utility.getFS().delete(new Path(stageTwoOutput));
+		Utility.getFS().delete(new Path(stageThreeOutput));
 		
 		if(!inputInfo.isSquareSkip) {
 			if(Utility.getFS().isDirectory(new Path(stageOneOutput)))

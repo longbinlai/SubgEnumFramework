@@ -35,7 +35,9 @@ public class EnumClique {
 		Configuration conf = new Configuration();
 		conf.setBoolean("count.only", isCountOnly);
 		conf.setStrings("clique.number.vertices", inputInfo.cliqueNumVertices);
-		if(!isCountOnly){
+		conf.setBoolean("result.compression", inputInfo.isResultCompression);
+
+		if(!isCountOnly && inputInfo.isResultCompression){
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
 					.toString() + "/" + Config.cliques), conf);
 		}
@@ -134,29 +136,40 @@ class EnumCliqueEnumReducer extends
 	@Override
 	public void setup(Context context) throws IOException{
 		Configuration conf = context.getConfiguration();
-		FileSystem fs = FileSystem.get(conf);
-		Path[] paths = DistributedCache.getLocalCacheFiles(conf);
-		for (int i = 0; i < paths.length; ++i) {
-			if (paths[i].toString().contains("part-r-")) {
-				SequenceFile.Reader reader = new SequenceFile.Reader(fs, paths[i], conf);
-				LongWritable key = null;
-				HVArray val = null;
-				try {
-					key = (LongWritable) reader.getKeyClass().newInstance();
-					val = (HVArray) reader.getValueClass().newInstance();
-				} catch (InstantiationException e) {
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
-				}
-				while(reader.next(key, val)){
-					for(long v : val.toArrays()){
-						cliqueMap.put(v, key.get());
+		if (conf.getBoolean("result.compression", true) && cliqueMap == null) {
+			cliqueMap = new TLongLongHashMap();
+			FileSystem fs = FileSystem.get(conf);
+			Path[] paths = DistributedCache.getLocalCacheFiles(conf);
+			for (int i = 0; i < paths.length; ++i) {
+				if (paths[i].toString().contains("part-r-")) {
+					SequenceFile.Reader reader = new SequenceFile.Reader(fs, paths[i], conf);
+					LongWritable key = null;
+					HVArray val = null;
+					try {
+						key = (LongWritable) reader.getKeyClass().newInstance();
+						val = (HVArray) reader.getValueClass().newInstance();
+					} catch (InstantiationException e) {
+						e.printStackTrace();
+					} catch (IllegalAccessException e) {
+						e.printStackTrace();
 					}
+					while (reader.next(key, val)) {
+						for (long v : val.toArrays()) {
+							cliqueMap.put(v, key.get());
+						}
+					}
+					reader.close();
+
 				}
-				reader.close();
-				
 			}
+		}
+	}
+	
+	@Override
+	public void cleanup(Context context){
+		if(cliqueMap != null){
+			cliqueMap.clear();
+			cliqueMap = null;
 		}
 	}
 }

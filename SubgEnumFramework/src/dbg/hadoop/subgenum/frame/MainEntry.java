@@ -32,7 +32,7 @@ public class MainEntry{
 			EnumSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-square] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumSquare.countOnce(inputInfo);
 		}
 		// Chordal Square is query: q2
@@ -50,7 +50,7 @@ public class MainEntry{
 			EnumChordalSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-chordalsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			
 			EnumChordalSquare.countOnce(inputInfo);
 		}
@@ -69,7 +69,7 @@ public class MainEntry{
 			EnumClique.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-" + inputInfo.cliqueNumVertices + "clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			
 			EnumClique.countOnce(inputInfo);
 		}
@@ -95,7 +95,7 @@ public class MainEntry{
 			EnumHouse.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-house] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			
 			EnumHouse.countOnce(inputInfo);
 		}
@@ -122,7 +122,7 @@ public class MainEntry{
 			EnumSolarSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-solarsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			
 			EnumSolarSquare.countOnce(inputInfo);
 		}
@@ -140,7 +140,7 @@ public class MainEntry{
 			EnumTwinTriangle.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
-			log.info("Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			log.info("[Frame-twintriangle] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumTwinTriangle.countOnce(inputInfo);
 		}
 	}

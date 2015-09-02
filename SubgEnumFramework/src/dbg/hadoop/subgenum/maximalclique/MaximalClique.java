@@ -11,10 +11,14 @@ import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
+@SuppressWarnings("deprecation")
 public class MaximalClique{
-	private static InputInfo inputInfo = null;
+	
 	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+		run(new InputInfo(args));
+	}
+
+	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
@@ -42,7 +46,19 @@ public class MaximalClique{
 		String s2Output = workDir + "clique.2.out";
 		String s3Output = workDir + "clique.3.out";
 		String s4Output = workDir + Config.cliques;
-		//String s5Output = workDir + Config.hyperEdge;
+		
+		if(Utility.getFS().isDirectory(new Path(s1Output))){
+			Utility.getFS().delete(new Path(s1Output));
+		}
+		if(Utility.getFS().isDirectory(new Path(s2Output))){
+			Utility.getFS().delete(new Path(s2Output));
+		}
+		if(Utility.getFS().isDirectory(new Path(s3Output))){
+			Utility.getFS().delete(new Path(s3Output));
+		}
+		if(Utility.getFS().isDirectory(new Path(workDir + Config.cliques))){
+			Utility.getFS().delete(new Path(workDir + Config.cliques));
+		}
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);

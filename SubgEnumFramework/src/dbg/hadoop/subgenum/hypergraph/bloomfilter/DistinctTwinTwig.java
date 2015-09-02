@@ -31,10 +31,12 @@ import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class DistinctTwinTwig{
-	public static InputInfo inputInfo = null;
+	
 	public static int main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
-		
+		return run(new InputInfo(args));
+	}
+	
+	public static int run(InputInfo inputInfo) throws Exception{	
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
@@ -44,7 +46,6 @@ public class DistinctTwinTwig{
 			System.err.println("Input file not specified!");
 			System.exit(-1);;
 		}
-		
 		
 		if (workDir.toLowerCase().contains("hdfs")) {
 			int pos = workDir.substring("hdfs://".length()).indexOf("/")
@@ -56,6 +57,10 @@ public class DistinctTwinTwig{
 		
 		String input = workDir + Config.adjListDir + ".0";
 		String output = workDir + Config.distinctTwinTwigDir;
+		
+		if(Utility.getFS().isDirectory(new Path(output))){
+			Utility.getFS().delete(new Path(output));
+		}
 		
 		// The parameters: <inputDir> <outputDir> <numReducers> <jarFile>
 		String opts[] = {input, output, numReducers, jarFile};		

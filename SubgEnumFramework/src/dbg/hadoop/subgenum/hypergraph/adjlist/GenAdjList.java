@@ -9,9 +9,12 @@ import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class GenAdjList{
-	private static InputInfo inputInfo = null;
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+
+	public static void run(InputInfo inputInfo) throws Exception{
 		String numReducers = inputInfo.numReducers;
 		String inputFile = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;

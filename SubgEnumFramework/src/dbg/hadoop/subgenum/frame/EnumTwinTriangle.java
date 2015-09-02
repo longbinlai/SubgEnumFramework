@@ -110,7 +110,7 @@ class EnumTwinTriangleReducer extends
 					long v3 = ((HVArray)array[j]).getFirst();
 					long v4 = ((HVArray)array[j]).getSecond();
 					if(v2 != v3 && v2 != v4){
-						long[] out = { v1, v2, v3, v4 }; 
+						long[] out = { v1, v2, v3, v4 };
 						context.write(_key, new HVArray(out));
 					}
 				}

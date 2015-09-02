@@ -5,13 +5,16 @@ import java.io.IOException;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.InputInfo;
-import dbg.hadoop.subgraphs.utils.Utility;
 
 public class GenBloomFilter{
-	public static InputInfo inputInfo = null;
-	public static void main(String[] args) throws IOException, InstantiationException, 
+	
+	public static void main(String[] args) throws InstantiationException, 
+		IllegalAccessException, ClassNotFoundException, IOException{
+		run(new InputInfo(args));
+	}
+
+	public static void run(InputInfo inputInfo) throws IOException, InstantiationException, 
 			IllegalAccessException, ClassNotFoundException{
-		inputInfo = new InputInfo(args);
 		
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;

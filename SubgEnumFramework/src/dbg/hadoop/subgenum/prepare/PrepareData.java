@@ -4,13 +4,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
-import dbg.hadoop.subgenum.hypergraph.adjlist.GenAdjListDriver;
+import dbg.hadoop.subgenum.hypergraph.adjlist.GenAdjList;
+import dbg.hadoop.subgenum.hypergraph.bloomfilter.DistinctTwinTwig;
+import dbg.hadoop.subgenum.hypergraph.bloomfilter.GenBloomFilter;
+import dbg.hadoop.subgenum.maximalclique.MaximalClique;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class PrepareData{
 	private static InputInfo inputInfo = null;
+	@SuppressWarnings("deprecation")
 	public static void main(String[] args) throws Exception{
 		inputInfo = new InputInfo(args);
 
@@ -31,6 +35,19 @@ public class PrepareData{
 			Utility.setDefaultFS("");
 		}
 		
+		if(Utility.getFS().isDirectory(new Path(dir + Config.undirectGraphDir))){
+			Utility.getFS().delete(new Path(dir + Config.undirectGraphDir));
+		}
+		if(Utility.getFS().isDirectory(new Path(dir + Config.degreeFileDir))){
+			Utility.getFS().delete(new Path(dir + Config.degreeFileDir));
+		}
+		if(Utility.getFS().isDirectory(new Path(dir + Config.preparedFileDir + ".tmp"))){
+			Utility.getFS().delete(new Path(dir + Config.preparedFileDir + ".tmp"));
+		}
+		if(Utility.getFS().isDirectory(new Path(dir + Config.preparedFileDir))){
+			Utility.getFS().delete(new Path(dir + Config.preparedFileDir));
+		}
+		
 		// Initially, turn the graph into its undirected version if necessary
 		// and change the delimiter from anything to tab
 		// The parameters: <inputfile> <outputDir> <numReducers> <seperator> <jarFile>
@@ -40,9 +57,9 @@ public class PrepareData{
 			ToolRunner.run(new Configuration(), new UndirectGraphDriver(), undirectedOpts);
 			// change the graph input path to the undirected output path
 			inputFilePath = dir + Config.undirectGraphDir;
+			
 		}
-		
-		
+
 		// First, generate the degree
 		// The parameters: <inputfile> <outputDir> <numReducers> <jarFile>
 		String[] genDegreeOpts = { inputFilePath, dir + Config.degreeFileDir, 
@@ -66,11 +83,20 @@ public class PrepareData{
 		
 		Utility.getFS().delete(new Path(s1OutputDir));
 		
-		Configuration conf = new Configuration();
-		conf.setInt("map.input.max.size", maxSize);
-		// Third, Generating adjlist
-		String[] adjListOpts = { dir + Config.preparedFileDir, 
-				dir + Config.adjListDir + "." + maxSize, numReducers, jarFile };
-		ToolRunner.run(conf, new GenAdjListDriver(), adjListOpts);
+		// Generate adjlist
+		inputInfo.maxSize = 0;
+		GenAdjList.run(inputInfo);
+		inputInfo.maxSize = maxSize;
+		GenAdjList.run(inputInfo);
+		
+		// Generate bloom filter
+		DistinctTwinTwig.run(inputInfo);
+		inputInfo.bfType = Config.EDGE;
+		GenBloomFilter.run(inputInfo);
+		inputInfo.bfType = Config.TWINTWIG1;
+		GenBloomFilter.run(inputInfo);
+		
+		// Generate Maximal Clique
+		MaximalClique.run(inputInfo);
 	}
 }

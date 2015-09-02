@@ -31,10 +31,12 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 @SuppressWarnings("deprecation")
 public class TwinTriangle {
-	private static InputInfo inputInfo = null;
-
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+	
+	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
@@ -347,6 +349,8 @@ class TwinTriangleStageTwoReducer extends
 		long v0 = _key.vertexArray.getFirst();
 		long v4 = _key.vertexArray.getSecond();
 		
+		list.clear();
+		
 		for (HVArray val : values) {
 			if (_key.sign == Config.SMALLSIGN) {
 				list.add(val.getFirst());
@@ -356,7 +360,7 @@ class TwinTriangleStageTwoReducer extends
 				TLongIterator iter = list.iterator();
 				while(iter.hasNext()){
 					long v3 = iter.next();
-					if(v1 != v3 && v2 != v3){
+					if(v1 != v3 && v2 != v3 && v1 < v3){
 						long[] array = { v0, v1, v2, v3, v4 };
 						context.write(NullWritable.get(), new HVArray(array));
 					}

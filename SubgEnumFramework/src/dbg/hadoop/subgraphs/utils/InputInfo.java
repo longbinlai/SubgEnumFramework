@@ -21,7 +21,7 @@ public class InputInfo {
 	public boolean isUndirected = false;
 	public boolean enableBF = true;
 	public boolean isHyper = false;
-	public boolean isCountOnly = true;
+	public boolean isCountOnly = false;
 	public boolean isCountPatternOnce = false;
 	public boolean isResultCompression = true;
 	public boolean isSquareSkip = false;

@@ -38,9 +38,12 @@ import com.hadoop.compression.lzo.LzoCodec;
 
 
 public class House{
-	private static InputInfo inputInfo = null;
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+	
+	public static void run(InputInfo inputInfo) throws Exception{
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
@@ -64,6 +67,9 @@ public class House{
 		
 		String stageOneOutput = workDir + "tt.house.tmp.1";
 		String stageTwoOutput = workDir + "tt.house.res";
+		
+		Utility.getFS().delete(new Path(stageOneOutput));
+		Utility.getFS().delete(new Path(stageTwoOutput));
 		
 		Configuration conf = new Configuration();
 		if(enableBloomFilter){

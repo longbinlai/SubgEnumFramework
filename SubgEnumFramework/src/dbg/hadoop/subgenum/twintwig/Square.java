@@ -38,9 +38,12 @@ import com.hadoop.compression.lzo.LzoCodec;
 
 
 public class Square{
-	private static InputInfo inputInfo = null;
-	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+	
+	public static void main(String[] args) throws Exception {
+		run(new InputInfo(args));
+	}
+	
+	public static void run(InputInfo inputInfo) throws Exception{
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
