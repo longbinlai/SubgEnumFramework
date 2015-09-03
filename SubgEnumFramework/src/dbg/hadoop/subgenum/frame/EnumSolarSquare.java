@@ -1,5 +1,7 @@
 package dbg.hadoop.subgenum.frame;
 
+import gnu.trove.list.array.TLongArrayList;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -22,7 +24,6 @@ import dbg.hadoop.subgraphs.utils.BinarySearch;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
-import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 @SuppressWarnings("deprecation")
@@ -175,17 +176,17 @@ class EnumSolarSquareReducer extends
 	Reducer<HVArray, LongWritable, HVArray, HVArray> {
 	
 	private boolean isCompress = true;
-	private HyperVertexHeap heap = null;
+	private TLongArrayList heap = null;
 	
 	@Override
 	public void reduce(HVArray _key, Iterable<LongWritable> values, Context context) 
 			throws IOException, InterruptedException {
 		heap.clear();
 		for(LongWritable val: values){
-			heap.insert(val.get());
+			heap.add(val.get());
 		}
 		heap.sort();
-		long[] array = heap.toArrays();
+		long[] array = heap.toArray();
 		if (!isCompress) {
 			int largeThanMinIndex = BinarySearch.findLargeIndex(_key.getSecond(), array);
 			for (int i = 0; i < largeThanMinIndex; ++i) {
@@ -202,7 +203,7 @@ class EnumSolarSquareReducer extends
 	public void setup(Context context){
 		Configuration conf = context.getConfiguration();
 		isCompress = conf.getBoolean("result.compression", true);
-		heap = new HyperVertexHeap(Config.HEAPINITSIZE);
+		heap = new TLongArrayList();
 	}
 }
 

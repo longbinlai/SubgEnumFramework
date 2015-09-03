@@ -20,6 +20,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 //import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
 import com.hadoop.compression.lzo.LzoCodec;
 
@@ -31,6 +32,8 @@ import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 public class DistinctTwinTwig{
+	
+	private static Logger log = Logger.getLogger(DistinctTwinTwig.class);
 	
 	public static int main(String[] args) throws Exception{
 		return run(new InputInfo(args));
@@ -62,6 +65,7 @@ public class DistinctTwinTwig{
 			Utility.getFS().delete(new Path(output));
 		}
 		
+		log.info("Calculating distinct TwinTwig...");
 		// The parameters: <inputDir> <outputDir> <numReducers> <jarFile>
 		String opts[] = {input, output, numReducers, jarFile};		
 		ToolRunner.run(new Configuration(), new DTTDriver(), opts);

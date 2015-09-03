@@ -1,5 +1,7 @@
 package dbg.hadoop.subgenum.frame;
 
+import gnu.trove.list.array.TLongArrayList;
+
 import java.io.IOException;
 import java.net.URI;
 
@@ -19,7 +21,6 @@ import dbg.hadoop.subgraphs.io.HVArrayComparator;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
-import dbg.hadoop.subgraphs.utils.HyperVertexHeap;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class EnumChordalSquare {
@@ -78,7 +79,7 @@ class EnumChordalSquareMapper extends
 class EnumChordalSquareReducer extends	
 	Reducer<HVArray,LongWritable, HVArray, HVArray> {
 	
-	private static HyperVertexHeap heap = null;
+	private static TLongArrayList heap = null;
 	private static boolean isResultCompression = true;
 	private static boolean enableBF = false;
 	private static BloomFilterOpr bloomfilterOpr = null;
@@ -88,10 +89,10 @@ class EnumChordalSquareReducer extends
 			Context context) throws IOException, InterruptedException {
 		heap.clear();
 		for (LongWritable val : values) {
-			heap.insert(val.get());
+			heap.add(val.get());
 		}  
 		heap.sort();
-		long[] array = heap.toArrays();
+		long[] array = heap.toArray();
 		boolean isOutput = true;
 		if(isResultCompression)
 			context.write(_key, new HVArray(array));
@@ -114,7 +115,7 @@ class EnumChordalSquareReducer extends
 	@Override
 	public void setup(Context context) {
 		Configuration conf = context.getConfiguration();
-		heap = new HyperVertexHeap(Config.HEAPINITSIZE);
+		heap = new TLongArrayList();
 		isResultCompression = conf.getBoolean(
 				"result.compression", true);
 		enableBF = conf.getBoolean("enable.bloom.filter", false);

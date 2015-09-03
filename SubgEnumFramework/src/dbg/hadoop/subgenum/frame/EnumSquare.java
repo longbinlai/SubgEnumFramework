@@ -235,29 +235,28 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 }
 
 class EnumSquareReducer extends	Reducer<HVArray,LongWritable, HVArray, HVArray> {
-	private static HyperVertexHeap heap = null;
+	private static TLongArrayList list = null;
 	
 	@Override
 	public void reduce(HVArray _key, Iterable<LongWritable> values, Context context) 
 			throws IOException, InterruptedException{
-		heap.clear();
+		list.clear();
 		for (LongWritable val : values) {
-			heap.insert(val.get());
+			list.add(val.get());
 		}
-		heap.sort();
-		long[] vertices = heap.toArrays();
-		context.write(_key, new HVArray(vertices));
+		list.sort();
+		context.write(_key, new HVArray(list.toArray()));
 	}
 	
 	@Override
 	public void setup(Context context){
-		heap = new HyperVertexHeap(Config.HEAPINITSIZE);
+		list = new TLongArrayList();
 	}
 	
 	@Override
 	public void cleanup(Context context){
-		heap.clear();
-		heap = null;
+		list.clear();
+		list = null;
 	}
 }
 

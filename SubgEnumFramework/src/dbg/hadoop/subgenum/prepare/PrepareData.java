@@ -7,6 +7,7 @@ import org.apache.hadoop.util.ToolRunner;
 import dbg.hadoop.subgenum.hypergraph.adjlist.GenAdjList;
 import dbg.hadoop.subgenum.hypergraph.bloomfilter.DistinctTwinTwig;
 import dbg.hadoop.subgenum.hypergraph.bloomfilter.GenBloomFilter;
+import dbg.hadoop.subgenum.hypergraph.triangle.Triangle;
 import dbg.hadoop.subgenum.maximalclique.MaximalClique;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.InputInfo;
@@ -93,10 +94,13 @@ public class PrepareData{
 		DistinctTwinTwig.run(inputInfo);
 		inputInfo.bfType = Config.EDGE;
 		GenBloomFilter.run(inputInfo);
-		inputInfo.bfType = Config.TWINTWIG1;
-		GenBloomFilter.run(inputInfo);
+		//inputInfo.bfType = Config.TWINTWIG1;
+		//GenBloomFilter.run(inputInfo);
 		
 		// Generate Maximal Clique
 		MaximalClique.run(inputInfo);
+		
+		// Generate Triangle
+		Triangle.run(inputInfo);
 	}
 }

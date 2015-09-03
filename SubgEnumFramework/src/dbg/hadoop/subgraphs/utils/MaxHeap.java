@@ -19,7 +19,7 @@ public class MaxHeap <T extends Comparable> {
 		this.size = this.heapSize = array.length;
 		this.arrays = (T[])new Comparable[this.size];
 		System.arraycopy(array, 0, this.arrays, 0, this.size);
-		this.buildMaxHeap();
+		//this.buildMaxHeap();
 	}
 	
 	public MaxHeap(int initialSize){

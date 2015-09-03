@@ -12,9 +12,12 @@ import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class Triangle{
-	private static InputInfo inputInfo = null;
+	
 	public static void main(String[] args) throws Exception{
-		inputInfo = new InputInfo(args);
+		run(new InputInfo(args));
+	}
+	
+	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
@@ -39,6 +42,10 @@ public class Triangle{
 		}
 		
 		String output = workDir + "triangle.res";
+		
+		if(Utility.getFS().isDirectory(new Path(output))){
+			Utility.getFS().delete(new Path(output));
+		}
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);

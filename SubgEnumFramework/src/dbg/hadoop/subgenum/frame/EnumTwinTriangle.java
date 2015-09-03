@@ -4,12 +4,12 @@ import gnu.trove.map.hash.TLongIntHashMap;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -17,10 +17,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HyperVertexComparator;
-import dbg.hadoop.subgraphs.utils.Config;
-import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
-import dbg.hadoop.subgraphs.utils.MaxHeap;
 
 public class EnumTwinTriangle {
 	
@@ -72,7 +69,8 @@ class EnumTwinTriangleReducer extends
 	Reducer<LongWritable, HVArray, LongWritable, HVArray> {
 	
 	private static boolean isCompress = true;
-	MaxHeap<HVArray> heap = null;
+	//MaxHeap<HVArray> heap = null;
+	ArrayList<HVArray> heap = null;
 	TLongIntHashMap firstItemMap = null;
 	
 	@Override
@@ -82,16 +80,18 @@ class EnumTwinTriangleReducer extends
 			heap.clear();
 		}
 		for(HVArray val: values){
-			heap.insert(new HVArray(val));
+			heap.add(new HVArray(val));
 		}
-		heap.sort();
-		Comparable<HVArray>[] array = heap.toArray();
+		//heap.sort();
+		HVArray[] array = heap.toArray(new HVArray[0]);
+		Arrays.sort(array);
+		//Comparable<HVArray>[] array = heap.toArray();
 		//System.out.println(heap);
 		if(!isCompress){
 			long curItem = -1L;
 			firstItemMap.clear();
 			for(int i = 0; i < array.length; ++i){
-				long v1 = ((HVArray)array[i]).getFirst();
+				long v1 = array[i].getFirst();
 				if(curItem != v1){
 					if(curItem == -1){
 						firstItemMap.put(v1, 0);
@@ -103,12 +103,12 @@ class EnumTwinTriangleReducer extends
 				firstItemMap.increment(v1);
 			}
 			for(int i = 0; i < array.length; ++i){
-				long v1 = ((HVArray)array[i]).getFirst();
-				long v2 = ((HVArray)array[i]).getSecond();
+				long v1 = array[i].getFirst();
+				long v2 = array[i].getSecond();
 
 				for(int j = firstItemMap.get(v1); j < array.length; ++j){
-					long v3 = ((HVArray)array[j]).getFirst();
-					long v4 = ((HVArray)array[j]).getSecond();
+					long v3 = array[j].getFirst();
+					long v4 = array[j].getSecond();
 					if(v2 != v3 && v2 != v4){
 						long[] out = { v1, v2, v3, v4 };
 						context.write(_key, new HVArray(out));
@@ -119,8 +119,8 @@ class EnumTwinTriangleReducer extends
 		else{
 			long[] outArray = new long[array.length * 2];
 			for(int i = 0; i < array.length; ++i){
-				outArray[2 * i] = ((HVArray)array[i]).getFirst();
-				outArray[2 * i + 1] = ((HVArray)array[i]).getSecond();
+				outArray[2 * i] = array[i].getFirst();
+				outArray[2 * i + 1] = array[i].getSecond();
 			}
 			context.write(_key, new HVArray(outArray));
 		}
@@ -130,7 +130,8 @@ class EnumTwinTriangleReducer extends
 	@Override
 	public void setup(Context context){
 		isCompress = context.getConfiguration().getBoolean("result.compression", true);
-		heap = new MaxHeap<HVArray>(Config.HEAPINITSIZE);
+		//heap = new MaxHeap<HVArray>(Config.HEAPINITSIZE);
+		heap = new ArrayList<HVArray>();
 		if(!isCompress)
 			firstItemMap = new TLongIntHashMap();
 	}
