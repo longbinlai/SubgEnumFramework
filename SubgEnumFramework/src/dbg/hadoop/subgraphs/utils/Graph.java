@@ -309,14 +309,8 @@ public class Graph{
 			return null;
 		}
 		TLongArrayList list = new TLongArrayList();
-		long[] ngbrs = graph.get(vertex).toArray();
-		Long[] array = new Long[ngbrs.length];
-		
-		for(int i = 0; i < ngbrs.length; ++i){
-			array[i] = ngbrs[i];
-		}
-		Arrays.sort(array, new GraphNodeComparator(degrees));
-		list.addAll(array);
+		list.addAll(graph.get(vertex).toArray());
+		list.sort();
 		return list;
 	}
 	

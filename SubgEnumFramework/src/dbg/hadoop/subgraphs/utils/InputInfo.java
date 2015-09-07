@@ -26,6 +26,7 @@ public class InputInfo {
 	public boolean isResultCompression = true;
 	public boolean isSquareSkip = false;
 	public boolean isChordalSquareSkip = false;
+	public boolean isFourCliqueSkip = false;
 	public boolean isSquarePartition = false;
 	public boolean isChordalSquarePartition = false;
 	public int squarePartitionThresh = 2000;
@@ -203,6 +204,13 @@ public class InputInfo {
 				if (valuePos != 0) {
 					isChordalSquareSkip = Boolean.parseBoolean(args[i].substring(valuePos));
 					System.out.println("skip.chordalsquare: " + isChordalSquareSkip);
+				}
+			}
+			else if (args[i].contains("skip.fourclique")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isFourCliqueSkip = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("skip.fourclique: " + isFourCliqueSkip);
 				}
 			}
 		}

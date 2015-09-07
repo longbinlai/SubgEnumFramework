@@ -77,7 +77,7 @@ public class CliqueEncoder{
 		this.normalBuffer.clear();
 	}
 
-	private static long binorm(int n, int d) {
+	public static long binorm(int n, int d) {
 		if (n == 0 || n < d) {
 			return 0;
 		}

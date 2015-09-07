@@ -143,5 +143,26 @@ public class MainEntry{
 			log.info("[Frame-twintriangle] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumTwinTriangle.countOnce(inputInfo);
 		}
+		else if (query.compareTo("near5clique") == 0 || query.compareTo("q7") == 0) {
+			if(!inputInfo.isFourCliqueSkip){
+				if (Utility.getFS().isDirectory(new Path(workDir + "frame.clique.res"))) {
+					Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
+				}
+			}
+			if (Utility.getFS().isDirectory(new Path(workDir + "frame.near5clique.res"))) {
+				Utility.getFS().delete(new Path(workDir + "frame.near5clique.res"));
+			}
+			if (Utility.getFS().isDirectory(new Path(workDir + "frame.near5clique.cnt"))) {
+				Utility.getFS().delete(new Path(workDir + "frame.near5clique.cnt"));
+			}
+			log.info("Start enumerating near5clique...");
+			startTime = System.currentTimeMillis();
+			
+			EnumNear5Clique.run(inputInfo);
+			
+			endTime=System.currentTimeMillis();
+			log.info("[Frame-near5clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			EnumNear5Clique.countOnce(inputInfo);
+		}
 	}
 }
