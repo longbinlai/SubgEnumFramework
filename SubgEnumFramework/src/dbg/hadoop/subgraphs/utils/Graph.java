@@ -73,14 +73,6 @@ public class Graph{
 		return l; 
 	}
 
-	//public TLongArrayList getNodeListSorted() {
-	//	TLongArrayList l = new TLongArrayList();
-	//	l.addAll(getNodeList().toSortArray(new GraphNodeComparator(degrees)));
-		
-	//	return l; 
-	//}
-
-
 	public TLongArrayList getLargerNeighbors(long a) {
 
 		TLongArrayList filtered = new TLongArrayList();
@@ -186,8 +178,6 @@ public class Graph{
 	        addingLargeClique = true;
 	      }
 	    }
-	   
-	    log.info("Start enumerating " + cliqueSize + "-clique");
 
 	    while (it.hasNext()) {
 	      a = it.next();

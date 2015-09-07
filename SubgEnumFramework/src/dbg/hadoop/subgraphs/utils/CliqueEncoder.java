@@ -1,5 +1,7 @@
 package dbg.hadoop.subgraphs.utils;
 
+import java.util.Arrays;
+
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.hash.TLongHashSet;
@@ -49,10 +51,13 @@ public class CliqueEncoder{
     buffer.add(v);
     buffer.add((long)k);
     buffer.add(cliqueSet.size());
-    TLongIterator iter = cliqueSet.iterator();
-    while(iter.hasNext()){
-      buffer.add(iter.next());
-    }
+    long[] array = cliqueSet.toArray();
+    Arrays.sort(array);
+    buffer.addAll(array);
+    //TLongIterator iter = cliqueSet.iterator();
+    //while(iter.hasNext()){
+     // buffer.add(iter.next());
+   // }
     buffer.addAll(normalBuffer.toArray());
     return buffer.toArray();
   }
@@ -65,6 +70,11 @@ public class CliqueEncoder{
 		res += binorm(sizeOfVerticesInLargeClique, sizeOfClique);
 		res += (array.length - 3 - sizeOfVerticesInLargeClique) / sizeOfClique;
 		return res;
+	}
+	
+	public void clear(){
+		this.cliqueSet.clear();
+		this.normalBuffer.clear();
 	}
 
 	private static long binorm(int n, int d) {
