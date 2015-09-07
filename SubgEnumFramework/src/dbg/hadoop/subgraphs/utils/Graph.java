@@ -76,16 +76,11 @@ public class Graph{
 	public TLongArrayList getLargerNeighbors(long a) {
 
 		TLongArrayList filtered = new TLongArrayList();
-		TLongHashSet neigh = graph.get(a);
-		if(neigh != null) {
-			TLongIterator it = neigh.iterator();
-			while(it.hasNext()){
-				long neighbor = it.next();
-				if(HyperVertex.compare(a, neighbor) < 0) {
-					filtered.add(neighbor);
-				}
-			}
-		}
+		TLongArrayList neigh = this.getAdjList(a);
+		neigh.sort();
+		long[] array = neigh.toArray();
+		int index = BinarySearch.findLargeIndex(a, array);
+		filtered.add(array, index, array.length - index);
 		return filtered; 
 	}
 

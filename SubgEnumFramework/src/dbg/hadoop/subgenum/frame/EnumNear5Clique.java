@@ -1,6 +1,8 @@
 package dbg.hadoop.subgenum.frame;
 
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.list.linked.TLongLinkedList;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
@@ -21,6 +23,7 @@ import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.HVArraySignComparator;
 import dbg.hadoop.subgraphs.utils.BinarySearch;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
+import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
@@ -30,6 +33,8 @@ public class EnumNear5Clique {
 	public static void run(InputInfo inputInfo) throws Exception {
 		String workDir = inputInfo.workDir;
 		Configuration conf = new Configuration();
+		conf.setBoolean("result.compression", inputInfo.isResultCompression);
+		
 		if(!inputInfo.isFourCliqueSkip){
 			inputInfo.cliqueNumVertices = "4"; // Make sure that 4clique is enumerated
 			EnumClique.run(inputInfo);
@@ -52,7 +57,7 @@ public class EnumNear5Clique {
 	}
 
 	public static void countOnce(InputInfo inputInfo) throws Exception{
-		if (inputInfo.isCountPatternOnce) {
+		if (inputInfo.isCountPatternOnce && inputInfo.isResultCompression) {
 			String[] opts3 = { inputInfo.workDir + "frame.near5clique.res",
 					inputInfo.workDir + "frame.near5clique.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
@@ -67,7 +72,7 @@ class EnumNear5CliqueMapper extends
 	Mapper<LongWritable, HVArray, HVArraySign, HVArray> {
 
 	private static TLongLinkedList list = null;
-	private static isCompress = false;
+	private static boolean isCompress = false;
 
 	@Override
 	public void map(LongWritable _key, HVArray _value, Context context)
@@ -78,7 +83,7 @@ class EnumNear5CliqueMapper extends
 		}
 		else {
 			int cliqueSize = (int) _value.get(2);
-			long[] cliqueArray = Arrays.copyOfRange(_value.toArrays(), 3, cliqueSize);
+			long[] cliqueArray = Arrays.copyOfRange(_value.toArrays(), 3, 3 + cliqueSize);
 			long[] normArray = Arrays.copyOfRange(_value.toArrays(), 3 + cliqueSize, _value.size());
 			handleCliqueCompress(_key, cliqueArray, context);
 			handleCliqueNorm(_key, normArray, context);
@@ -107,8 +112,8 @@ class EnumNear5CliqueMapper extends
 		throws IOException, InterruptedException {
 		list.clear();
 		list.addAll(array);
-		for(int i = 0; i < array.lenth - 1; ++i){
-			for(int j = 0 i < array.length; ++j){
+		for(int i = 0; i < array.length - 1; ++i){
+			for(int j = i + 1; j < array.length; ++j){
 				// Remove i, j
 				list.removeAt(i);
 				list.removeAt(j);
@@ -123,8 +128,8 @@ class EnumNear5CliqueMapper extends
 
 	@Override
 	public void setup(Context context){
-		isCompress = context.getBoolean("result.compression", false);
-		list = new TLongLinkedist();
+		isCompress = context.getConfiguration().getBoolean("result.compression", false);
+		list = new TLongLinkedList();
 	}
 
 	@Override
@@ -139,7 +144,7 @@ class EnumNear5CliqueReducer extends
 	
 	//private static TLongArrayList triangleList = null;
 	private static TLongArrayList resList = null;
-	private static isCompress = false;
+	private static boolean isCompress = false;
 	
 	@Override
 	public void reduce(HVArraySign _key, Iterable<HVArray> _values, Context context) 
@@ -147,6 +152,7 @@ class EnumNear5CliqueReducer extends
 		if(_key.sign != Config.SMALLSIGN){
 			return;
 		}
+		//System.out.println(isCompress);
 		long len = 0L;
 		
 		resList.clear();
@@ -172,7 +178,7 @@ class EnumNear5CliqueReducer extends
 						long v3 = value.getFirst();
 						long v4 = value.getSecond();
 						if(v1 != v3 && v1 != v4) {
-							context.write(_key, new HVArray(v1, v3, v4));
+							context.write(new HVArray(_key.vertexArray), new HVArray(v1, v3, v4));
 						}
 					}
 				}	
@@ -215,6 +221,7 @@ class Near5CliqueCountMapper extends
 		if(triSize == 0){
 			return;
 		}
+		System.out.println(HyperVertex.HVArrayToString(array));
 		triSet.clear();
 		for(int i = 1; i < triSize + 1; ++i){
 			triSet.add(array[i]);
@@ -237,13 +244,13 @@ class Near5CliqueCountMapper extends
 					int cliqueSize = (int) array[i];
 					long[] cliqueArray = Arrays.copyOfRange(array, i + 1, cliqueSize);
 				    int num = 0;
-				    for(int i = 0; i < cliqueArray.length; ++i) {
+				    for(int j = 0; j < cliqueArray.length; ++j) {
 				    	if(triSet.contains(cliqueArray[i])) {
 				    		++num;
 				    	}
 				    }
-				    count += CliqueEncoder.binom(cliqueSize, 2);
-				    count -= CliqueEncoder.binom(num, 2) * 2;
+				    count += CliqueEncoder.binorm(cliqueSize, 2);
+				    count -= CliqueEncoder.binorm(num, 2) * 2;
 				    count -= num * (cliqueSize - num);
 					i += cliqueSize + 1;
 				}
