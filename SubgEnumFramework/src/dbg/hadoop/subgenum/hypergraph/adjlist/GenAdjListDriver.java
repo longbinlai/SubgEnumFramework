@@ -25,7 +25,7 @@ import dbg.hadoop.subgraphs.io.HyperVertexComparator;
 public class GenAdjListDriver extends Configured implements Tool{
 
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		Configuration conf = new Configuration();
+		Configuration conf = getConf();
 		// The parameters: <inputfile> <outputDir> <numReducers> <jarFile>
 		int numReducers = Integer.parseInt(args[2]);
 

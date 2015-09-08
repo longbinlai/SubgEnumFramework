@@ -61,14 +61,6 @@ public class FiveClique{
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		String stageOneOutput = workDir + "tt.5clique.tmp.1";
 		String stageTwoOutput = workDir + "tt.5clique.tmp.2";
 		String stageThreeOutput = workDir + "tt.5clique.tmp.3";

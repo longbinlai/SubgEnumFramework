@@ -51,14 +51,6 @@ public class SolarSquare{
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		String stageOneOutput = workDir + "tt.solarsquare.tmp.1";
 		String stageTwoOutput = workDir + "tt.solarsquare.tmp.2";
 		String stageThreeOutput = workDir + "tt.solarsquare.res";

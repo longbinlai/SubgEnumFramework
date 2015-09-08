@@ -70,5 +70,14 @@ public class MainEntry{
 			endTime=System.currentTimeMillis();
 			log.info("[TwinTwig-twintriangle] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 		}
+		// Near5Clique is q6
+		else if (query.compareTo("near5clique") == 0 || query.compareTo("q7") == 0) {
+			log.info("TwinTwig: Start enumerating twin triangle...");
+			startTime = System.currentTimeMillis();
+			Near5Clique.run(inputInfo);
+			endTime = System.currentTimeMillis();
+			log.info("[TwinTwig-near5clique] Time elapsed: "
+					+ (endTime - startTime) / 1000 + "s");
+		}
 	}
 }

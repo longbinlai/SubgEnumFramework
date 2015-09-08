@@ -38,13 +38,15 @@ public class GenAdjListReducer extends
 	private HyperVertexHeap largeDegreeVertices = null;
 	private HyperVertexHeap smallDegreeVertices = null;
 	private List<long[]> list = new ArrayList<long[]>();
-	private int maxSize = 0;
+	private static int maxSize = 0;
 	//private Random rand = null;
 	@Override
 	public void reduce(LongWritable _key, Iterable<LongWritable> values,
 			Context context) throws IOException, InterruptedException{
 		largeDegreeVertices.init(Config.HEAPINITSIZE);
 		smallDegreeVertices.init(Config.HEAPINITSIZE);
+		
+		System.out.println(maxSize);
 		
 		list.clear();
 		boolean outputIsoVertex = false;

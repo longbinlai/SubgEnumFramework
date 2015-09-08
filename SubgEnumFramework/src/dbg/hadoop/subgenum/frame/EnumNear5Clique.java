@@ -221,7 +221,7 @@ class Near5CliqueCountMapper extends
 		if(triSize == 0){
 			return;
 		}
-		System.out.println(HyperVertex.HVArrayToString(array));
+		//System.out.println(HyperVertex.HVArrayToString(array));
 		triSet.clear();
 		for(int i = 1; i < triSize + 1; ++i){
 			triSet.add(array[i]);
@@ -256,7 +256,7 @@ class Near5CliqueCountMapper extends
 				}
 			}
 		} catch (ArrayIndexOutOfBoundsException e) {
-			System.out.println(HyperVertex.HVArrayToString(array));
+			System.err.println(HyperVertex.HVArrayToString(array));
 			System.exit(1);
 		}
 		context.write(NullWritable.get(), new LongWritable(count));

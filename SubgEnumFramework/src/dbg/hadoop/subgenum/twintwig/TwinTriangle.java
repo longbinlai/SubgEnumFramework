@@ -48,14 +48,6 @@ public class TwinTriangle {
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		String stageOneOutput = workDir + "tt.twintriangle.tmp.1";
 		String stageTwoOutput = workDir + "tt.twintriangle.res";
 		
@@ -127,41 +119,47 @@ class TwinTriangleStageOneMapper extends
 				}
 			}
 		}
-
-		for (int i = 0; i < smallerThanThisG1.length; ++i) {
-			// Generate TwinTwig 3
-			for (int k = i + 1; k < smallerThanThisG1.length; ++k) {
-				if (enableBF) {
-					isOutput = bloomfilterOpr.get().test(
-							HyperVertex.VertexID(smallerThanThisG1[i]),
-							HyperVertex.VertexID(smallerThanThisG1[k]));
+		
+		if (smallerThanThisG0.length == 0) {
+			for (int i = 0; i < smallerThanThisG1.length; ++i) {
+				// Generate TwinTwig 3
+				for (int k = i + 1; k < smallerThanThisG1.length; ++k) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(smallerThanThisG1[i]),
+								HyperVertex.VertexID(smallerThanThisG1[k]));
+					}
+					if (isOutput) {
+						context.write(new HVArraySign(smallerThanThisG1[i],
+								smallerThanThisG1[k], Config.SMALLSIGN), _key);
+						context.write(new HVArraySign(smallerThanThisG1[k],
+								smallerThanThisG1[i], Config.SMALLSIGN), _key);
+					}
+					context.write(
+							new HVArraySign(smallerThanThisG1[i], _key.get(),
+									Config.LARGESIGN), new LongWritable(
+									smallerThanThisG1[k]));
 				}
-				if (isOutput) {
-					context.write(new HVArraySign(smallerThanThisG1[i], smallerThanThisG1[k],
-							Config.SMALLSIGN), _key);
-					context.write(new HVArraySign(smallerThanThisG1[k], smallerThanThisG1[i],
-							Config.SMALLSIGN), _key);
+				// Generate TwinTwig 2
+				for (int j = 0; j < largerThanThis.length; ++j) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(smallerThanThisG1[i]),
+								HyperVertex.VertexID(largerThanThis[j]));
+					}
+					if (isOutput) {
+						context.write(new HVArraySign(smallerThanThisG1[i],
+								largerThanThis[j], Config.SMALLSIGN), _key);
+					}
+					context.write(
+							new HVArraySign(smallerThanThisG1[i], _key.get(),
+									Config.LARGESIGN), new LongWritable(
+									largerThanThis[j]));
 				}
-				context.write(new HVArraySign(smallerThanThisG1[i], _key.get(), Config.LARGESIGN), 
-						new LongWritable(smallerThanThisG1[k]));
 			}
-			// Generate TwinTwig 2
-			for (int j = 0; j < largerThanThis.length; ++j) {
-				if (enableBF) {
-					isOutput = bloomfilterOpr.get().test(
-							HyperVertex.VertexID(smallerThanThisG1[i]),
-							HyperVertex.VertexID(largerThanThis[j]));
-				}
-				if (isOutput) {
-					context.write(new HVArraySign(smallerThanThisG1[i], largerThanThis[j],
-							Config.SMALLSIGN), _key);
-				}
-				context.write(new HVArraySign(smallerThanThisG1[i], _key.get(),
-							Config.LARGESIGN), new LongWritable(largerThanThis[j]));
-			}
-		}
+	    }
 
-		if (smallerThanThisG0.length > 0) {
+		if(smallerThanThisG0.length > 0) {
 			for (int i = 0; i < smallerThanThisG0.length; ++i) {
 				for (int j = 0; j < smallerThanThisG1.length; ++j) {
 					if (enableBF) {
@@ -281,22 +279,24 @@ class TwinTriangleStageTwoMapper1 extends
 				}
 			}
 			
-			for (int i = 0; i < smallerThanThisG1.length; ++i) {
-				for (int j = 0; j < largerThanThis.length; ++j) {
-					if (enableBF) {
-						isOutput = bloomfilterOpr.get().test(
-								HyperVertex.VertexID(smallerThanThisG1[i]),
-								HyperVertex.VertexID(largerThanThis[j]));
-					}
-					if (isOutput) {
-						context.write(new HVArraySign(smallerThanThisG1[i], largerThanThis[j],
-								Config.SMALLSIGN), new HVArray(_key.get()));
+			if (!_value.existBackup()) {
+				for (int i = 0; i < smallerThanThisG1.length; ++i) {
+					for (int j = 0; j < largerThanThis.length; ++j) {
+						if (enableBF) {
+							isOutput = bloomfilterOpr.get().test(
+									HyperVertex.VertexID(smallerThanThisG1[i]),
+									HyperVertex.VertexID(largerThanThis[j]));
+						}
+						if (isOutput) {
+							context.write(new HVArraySign(smallerThanThisG1[i],
+									largerThanThis[j], Config.SMALLSIGN),
+									new HVArray(_key.get()));
+						}
 					}
 				}
 			}
 		}
 	}
-	
 	
 	@Override
 	public void setup(Context context) {

@@ -57,14 +57,6 @@ public class Square{
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		String outputDir = workDir + "tt.square.res";
 		
 		if(Utility.getFS().isDirectory(new Path(outputDir)))

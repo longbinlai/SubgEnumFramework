@@ -60,14 +60,6 @@ public class FourClique{
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		String stageOneOutput = workDir + "tt.4clique.tmp.1";
 		String stageTwoOutput = workDir + "tt.4clique.res";
 		
@@ -95,7 +87,7 @@ public class FourClique{
 		ToolRunner.run(conf, new FourCliqueStageTwoDriver(), opts2);
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
-		Utility.getFS().delete(new Path(stageTwoOutput));
+		//Utility.getFS().delete(new Path(stageTwoOutput));
 	}
 }
 

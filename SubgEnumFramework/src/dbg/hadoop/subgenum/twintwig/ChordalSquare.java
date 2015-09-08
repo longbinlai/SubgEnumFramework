@@ -61,14 +61,6 @@ public class ChordalSquare{
 			System.exit(-1);;
 		}
 		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		Configuration conf = new Configuration();
 		
 		if(enableBF){
@@ -145,7 +137,7 @@ class ChordalSquareStageOneMapper extends
 	private static BloomFilterOpr bloomfilterOpr = null;
 	private static boolean enableBF;
 
-	// The hypervertex set
+	/*
 	@Override
 	public void map(LongWritable key, HyperVertexAdjList value, Context context)
 			throws IOException, InterruptedException {
@@ -167,7 +159,77 @@ class ChordalSquareStageOneMapper extends
 				}
 			}
 		}
+	}*/
+	
+	@Override
+	public void map(LongWritable _key, HyperVertexAdjList _value,
+			Context context) throws IOException, InterruptedException {
 		
+		long[] largerThanThis = _value.getLargeDegreeVertices();
+		long[] smallerThanThisG0 = _value.getSmallDegreeVerticesGroup0();
+		long[] smallerThanThisG1 = _value.getSmallDegreeVerticesGroup1();
+		
+		//System.out.println(HyperVertex.HVArrayToString(smallerThanThisG0));
+		boolean isOutput = true;
+
+		if (_value.isFirstAdd()) {
+			// Generate TwinTwig 1
+			for (int i = 0; i < largerThanThis.length - 1; ++i) {
+				for (int j = i + 1; j < largerThanThis.length; ++j) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(largerThanThis[i]),
+								HyperVertex.VertexID(largerThanThis[j]));
+					}
+					if(isOutput)
+						context.write(new HVArray(largerThanThis[i], largerThanThis[j]), _key);
+				}
+			}
+		}
+		
+		if (smallerThanThisG0.length == 0) {
+			for (int i = 0; i < smallerThanThisG1.length; ++i) {
+				// Generate TwinTwig 3
+				for (int k = i + 1; k < smallerThanThisG1.length; ++k) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(smallerThanThisG1[i]),
+								HyperVertex.VertexID(smallerThanThisG1[k]));
+					}
+					if (isOutput) {
+						context.write(new HVArray(smallerThanThisG1[i],
+								smallerThanThisG1[k]), _key);
+					}
+				}
+				// Generate TwinTwig 2
+				for (int j = 0; j < largerThanThis.length; ++j) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(smallerThanThisG1[i]),
+								HyperVertex.VertexID(largerThanThis[j]));
+					}
+					if (isOutput) {
+						context.write(new HVArray(smallerThanThisG1[i],
+								largerThanThis[j]), _key);
+					}
+				}
+			}
+		}
+
+		else {
+			for (int i = 0; i < smallerThanThisG0.length; ++i) {
+				for (int j = 0; j < smallerThanThisG1.length; ++j) {
+					if (enableBF) {
+						isOutput = bloomfilterOpr.get().test(
+								HyperVertex.VertexID(smallerThanThisG0[i]),
+								HyperVertex.VertexID(smallerThanThisG1[j]));
+					}
+					if (isOutput) {
+						context.write(new HVArray(smallerThanThisG0[i], smallerThanThisG1[j]), _key);
+					}
+				}
+			}
+		}
 	}
 
 	@Override
@@ -191,7 +253,9 @@ class ChordalSquareStageOneMapper extends
 
 class ChordalSquareStageOneReducer
 	extends Reducer<HVArray, LongWritable, HVArray, HVArray> {
+	
 	private static TLongArrayList ttList = null;
+	
 	public void reduce(HVArray _key, Iterable<LongWritable> values,
 			Context context) throws IOException, InterruptedException {	
 		ttList.clear();

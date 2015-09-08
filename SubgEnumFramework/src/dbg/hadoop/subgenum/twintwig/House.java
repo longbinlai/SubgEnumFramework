@@ -14,6 +14,7 @@ import dbg.hadoop.subgraphs.io.HyperVertexAdjList;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.HyperVertex;
+import dbg.hadoop.subgraphs.utils.TwinTwigGenerator;
 import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
@@ -29,6 +30,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -55,14 +57,6 @@ public class House{
 		if(inputFilePath.isEmpty()){
 			System.err.println("Input file not specified!");
 			System.exit(-1);;
-		}
-		
-		if (workDir.toLowerCase().contains("hdfs")) {
-			int pos = workDir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(workDir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
 		}
 		
 		String stageOneOutput = workDir + "tt.house.tmp.1";
@@ -151,33 +145,20 @@ class HouseTwinTwigMapper extends
 
 	private static BloomFilterOpr bloomfilterOpr = null;
 	private static boolean enableBF;
+	private TwinTwigGenerator ttwigGen = null;
 
 	// The hypervertex set
 	@Override
 	public void map(LongWritable key, HyperVertexAdjList value, Context context)
 			throws IOException, InterruptedException {
-		long cur = key.get();
-		long[] largerThanCur = value.getLargeDegreeVertices();
-		long[] smallerThanCur = value.getSmallDegreeVerticesGroup1();
-		long[] fullNeighbors = new long[largerThanCur.length
-				+ smallerThanCur.length];
-		System.arraycopy(smallerThanCur, 0, fullNeighbors, 0,
-				smallerThanCur.length);
-		System.arraycopy(largerThanCur, 0, fullNeighbors,
-				smallerThanCur.length, largerThanCur.length);
-		boolean isOutput = true;
-		for (int i = 0; i < fullNeighbors.length - 1; ++i) {
-			for (int j = i + 1; j < fullNeighbors.length; ++j) {
-				if (enableBF) {
-					isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(fullNeighbors[i]),
-							HyperVertex.VertexID(fullNeighbors[j]));
-				}
-				if (isOutput) {
-					context.write(new HVArraySign(fullNeighbors[i], fullNeighbors[j], 
-							Config.SMALLSIGN), new HVArray(key.get()));
-				}
-			}
+		if (enableBF) {
+			ttwigGen = new TwinTwigGenerator(key.get(), value, bloomfilterOpr.get());
+		} else {
+			ttwigGen = new TwinTwigGenerator(key.get(), value);
 		}
+		ttwigGen.genTwinTwigOne(context, Config.SMALLSIGN, (byte) 3, (byte) 0);
+		ttwigGen.genTwinTwigTwo(context, Config.SMALLSIGN, (byte) 3);
+		ttwigGen.genTwinTwigThree(context, Config.SMALLSIGN, (byte) 3);
 	}
 
 	@Override
