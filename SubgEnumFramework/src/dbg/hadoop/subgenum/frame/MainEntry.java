@@ -164,5 +164,12 @@ public class MainEntry{
 			log.info("[Frame-near5clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumNear5Clique.countOnce(inputInfo);
 		}
+		else {
+			System.err.println("Please specify enum.query=[...];");
+			System.err.println("Supported queries are: square, " +
+					"chordalsquare, clique, house, solarsquare, " +
+					"twintriangle, near5clique;");
+			System.exit(0);
+		}
 	}
 }

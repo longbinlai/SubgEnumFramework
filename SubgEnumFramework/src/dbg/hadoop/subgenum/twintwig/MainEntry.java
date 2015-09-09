@@ -70,7 +70,7 @@ public class MainEntry{
 			endTime=System.currentTimeMillis();
 			log.info("[TwinTwig-twintriangle] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 		}
-		// Near5Clique is q6
+		// Near5Clique is q7
 		else if (query.compareTo("near5clique") == 0 || query.compareTo("q7") == 0) {
 			log.info("TwinTwig: Start enumerating twin triangle...");
 			startTime = System.currentTimeMillis();
@@ -78,6 +78,13 @@ public class MainEntry{
 			endTime = System.currentTimeMillis();
 			log.info("[TwinTwig-near5clique] Time elapsed: "
 					+ (endTime - startTime) / 1000 + "s");
+		}
+		else {
+			System.err.println("Please specify enum.query=[...];");
+			System.err.println("Supported queries are: square, " +
+					"chordalsquare, clique, house, solarsquare, " +
+					"twintriangle, near5clique;");
+			System.exit(0);
 		}
 	}
 }

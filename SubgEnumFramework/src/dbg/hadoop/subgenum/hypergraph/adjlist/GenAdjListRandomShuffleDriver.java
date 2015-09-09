@@ -2,6 +2,7 @@ package dbg.hadoop.subgenum.hypergraph.adjlist;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.security.SecureRandom;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -23,6 +24,7 @@ import com.hadoop.compression.lzo.LzoCodec;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayComparator;
+import dbg.hadoop.subgraphs.io.HVArrayPartitioner;
 import dbg.hadoop.subgraphs.io.HyperVertexAdjList;
 
 public class GenAdjListRandomShuffleDriver extends Configured implements Tool{
@@ -42,6 +44,7 @@ public class GenAdjListRandomShuffleDriver extends Configured implements Tool{
 		job.setReducerClass(GenAdjListRandomShuffleReducer.class);
 		
 		job.setSortComparatorClass(HVArrayComparator.class);
+		job.setPartitionerClass(HVArrayPartitioner.class);
 		
 		job.setMapOutputKeyClass(HVArray.class);
 		job.setMapOutputValueClass(HyperVertexAdjList.class);
@@ -67,16 +70,15 @@ public class GenAdjListRandomShuffleDriver extends Configured implements Tool{
 
 class GenAdjListRandomShuffleMapper extends
 		Mapper<LongWritable, HyperVertexAdjList, HVArray, HyperVertexAdjList> {
-	Random rand = null;
+	private static SecureRandom rand = null;
 	@Override
 	public void map(LongWritable key, HyperVertexAdjList value, Context context)
 			throws IOException, InterruptedException {
-
 		context.write(new HVArray(key.get(), rand.nextLong()), value);
 	}
 	@Override
 	public void setup(Context context){
-		rand = new Random(System.currentTimeMillis());
+		rand = new SecureRandom();
 	}
 }
 
