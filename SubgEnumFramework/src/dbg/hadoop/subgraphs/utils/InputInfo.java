@@ -29,6 +29,8 @@ public class InputInfo {
 	public boolean isFourCliqueSkip = false;
 	public boolean isSquarePartition = false;
 	public boolean isChordalSquarePartition = false;
+	// Use new version clique enumeration functions
+	public boolean isEnumCliqueV2 = false;
 	public int squarePartitionThresh = 2000;
 	public int chordalSquarePartitionThresh = 2000;
 	
@@ -211,6 +213,13 @@ public class InputInfo {
 				if (valuePos != 0) {
 					isFourCliqueSkip = Boolean.parseBoolean(args[i].substring(valuePos));
 					System.out.println("skip.fourclique: " + isFourCliqueSkip);
+				}
+			}
+			else if (args[i].contains("enum.clique.v2")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isEnumCliqueV2 = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("enum.clique.v2: " + isEnumCliqueV2);
 				}
 			}
 		}

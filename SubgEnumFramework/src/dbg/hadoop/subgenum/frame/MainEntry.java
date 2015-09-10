@@ -66,12 +66,17 @@ public class MainEntry{
 			log.info("Start enumerating " + inputInfo.cliqueNumVertices + "-clique...");
 			startTime = System.currentTimeMillis();
 			
-			EnumClique.run(inputInfo);
+			if(inputInfo.isEnumCliqueV2)
+				EnumCliqueV2.run(inputInfo);
+			else
+				EnumClique.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-" + inputInfo.cliqueNumVertices + "clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
-			
-			EnumClique.countOnce(inputInfo);
+			if(inputInfo.isEnumCliqueV2)
+				EnumCliqueV2.countOnce(inputInfo);
+			else
+				EnumClique.countOnce(inputInfo);
 		}
 		// House is query: q4
 		else if (query.compareTo("house") == 0 || query.compareTo("q4") == 0) {

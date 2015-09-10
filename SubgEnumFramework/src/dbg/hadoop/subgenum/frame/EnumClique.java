@@ -1,6 +1,7 @@
 package dbg.hadoop.subgenum.frame;
 
 import gnu.trove.map.hash.TLongLongHashMap;
+import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,6 +22,7 @@ import org.apache.hadoop.util.ToolRunner;
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Graph;
+import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 
@@ -37,10 +39,10 @@ public class EnumClique {
 		conf.setStrings("clique.number.vertices", inputInfo.cliqueNumVertices);
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
 
-		if(!isCountOnly && inputInfo.isResultCompression){
-			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
-					.toString() + "/" + Config.cliques), conf);
-		}
+		//if(!isCountOnly){
+		//	DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
+		//			.toString() + "/" + Config.cliques), conf);
+		//}
 		
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.res",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
@@ -115,27 +117,32 @@ class EnumCliqueCountReducer extends
 
 class EnumCliqueEnumReducer extends
 		Reducer<LongWritable, HVArray, LongWritable, HVArray> {
-	private static TLongLongHashMap cliqueMap = null;
+	//private static TLongLongHashMap cliqueMap = null;
+
 	@Override
 	public void reduce(LongWritable _key, Iterable<HVArray> values,
 			Context context) throws IOException, InterruptedException {
 		Graph G = new Graph();
 		int cnt = 0;
+		boolean noAddEdge = false;
 		for (HVArray val : values) {
 			cnt = cnt + 1;
 			for (int i = 0; i < val.size(); i = i + 2) {
-				G.addEdge(val.get(i), val.get(i + 1));
+				long v1 = val.get(i), v2 = val.get(i + 1);
+				G.addEdge(v1, v2);
 			}
 		}
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
-		long[] cliqueEnc = G.enumCliqueOfSize(k - 1, _key.get(), cliqueMap);
+		long[] cliqueEnc = G.enumCliqueOfSize(k - 1, _key.get());
 		context.write(_key, new HVArray(cliqueEnc));
 	}
 	
+	/*
 	@Override
 	public void setup(Context context) throws IOException{
 		Configuration conf = context.getConfiguration();
+
 		if (conf.getBoolean("result.compression", true) && cliqueMap == null) {
 			cliqueMap = new TLongLongHashMap();
 			FileSystem fs = FileSystem.get(conf);
@@ -172,6 +179,7 @@ class EnumCliqueEnumReducer extends
 			cliqueMap = null;
 		}
 	}
+	*/
 }
 
 class CliqueCountMapper1 extends
@@ -180,6 +188,7 @@ class CliqueCountMapper1 extends
 	public void map(LongWritable _key, LongWritable _value, Context context)
 			throws IOException, InterruptedException {
 		context.write(NullWritable.get(), _value);
+		//System.out.println(HyperVertex.VertexID(_key.get()) + "\t" + _value.get());
 	}
 }
 
@@ -188,8 +197,9 @@ class CliqueCountMapper2 extends
 	@Override
 	public void map(LongWritable _key, HVArray _value, Context context)
 			throws IOException, InterruptedException {
-		context.write(NullWritable.get(), new LongWritable(
-				CliqueEncoder.getNumCliquesFromEncodedArray(_value.toArrays())));
+		long count = CliqueEncoder.getNumCliquesFromEncodedArray(_value.toArrays());
+		context.write(NullWritable.get(), new LongWritable(count));
+		//System.out.println(HyperVertex.VertexID(_key.get()) + "\t" + count);
 	}
 }
 

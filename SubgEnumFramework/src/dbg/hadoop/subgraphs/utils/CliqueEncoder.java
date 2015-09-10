@@ -18,15 +18,26 @@ import gnu.trove.set.hash.TLongHashSet;
 public class CliqueEncoder{
   private int k = 4;
   private long v = 0;
+  private int cliqueSetSize = -1;
   private TLongHashSet cliqueSet;
   private TLongArrayList normalBuffer;
   
-  public CliqueEncoder(long curV, int cliqueSize){
-	  k = cliqueSize;
+  public CliqueEncoder(long curV, int _k){
+	  k = _k;
 	  v = curV;
 	  cliqueSet = new TLongHashSet();
 	  normalBuffer = new TLongArrayList();
   }
+  
+  public CliqueEncoder(long curV, int _k, int size){
+	  k = _k;
+	  v = curV;
+	  cliqueSetSize = 0;
+	  cliqueSet = new TLongHashSet();
+	  normalBuffer = new TLongArrayList();
+  }
+ 
+ 
   
   public void addCliqueVertex(long[] vertices){
     if(vertices == null){
@@ -46,18 +57,33 @@ public class CliqueEncoder{
     normalBuffer.addAll(vertices);
   }
   
+  public void addNormalVerticesWithCompress(long[] vertices, int k, long[] commonCliqueNeighbors) {
+	  
+	  int len = 0;
+	  len = commonCliqueNeighbors == null ? vertices.length + 1 :
+		  		vertices.length + commonCliqueNeighbors.length + 1;
+	  normalBuffer.add(len);
+	  normalBuffer.add(k);
+	  normalBuffer.addAll(vertices);
+	  if(commonCliqueNeighbors != null) {
+		  Arrays.sort(commonCliqueNeighbors);
+		  normalBuffer.addAll(commonCliqueNeighbors);
+	  }
+  }
+  
   public long[] getEncodedCliques() {
     TLongArrayList buffer = new TLongArrayList(cliqueSet.size() + normalBuffer.size() + 3);
     buffer.add(v);
     buffer.add((long)k);
-    buffer.add(cliqueSet.size());
+    if(cliqueSet.size() != 0){
+    	buffer.add(cliqueSet.size());
+    }
+    else {
+    	buffer.add(cliqueSetSize);
+    }
     long[] array = cliqueSet.toArray();
     Arrays.sort(array);
     buffer.addAll(array);
-    //TLongIterator iter = cliqueSet.iterator();
-    //while(iter.hasNext()){
-     // buffer.add(iter.next());
-   // }
     buffer.addAll(normalBuffer.toArray());
     return buffer.toArray();
   }
@@ -66,9 +92,34 @@ public class CliqueEncoder{
 		long res = 0L;
 		assert (array != null && array.length >= 3);
 		int sizeOfClique = (int) array[1];
+		//int sizeOfVerticesInLargeClique = (int) array[2];
+		//res += binorm(sizeOfVerticesInLargeClique, sizeOfClique);
+		res += (array.length - 3) / sizeOfClique;
+		return res;
+	}
+	
+	public static long getNumCliquesFromEncodedArrayV2(long[] array) {
+		long res = 0L;
+		assert (array != null && array.length >= 3);
+		int sizeOfClique = (int) array[1];
 		int sizeOfVerticesInLargeClique = (int) array[2];
+		if(sizeOfVerticesInLargeClique == -1) {
+			return getNumCliquesFromEncodedArray(array);
+		}
+		
 		res += binorm(sizeOfVerticesInLargeClique, sizeOfClique);
-		res += (array.length - 3 - sizeOfVerticesInLargeClique) / sizeOfClique;
+		int index = 3 + sizeOfVerticesInLargeClique;
+		while(index < array.length){
+			int len = (int) array[index];
+			int nonCliqueVerticesSize = (int) array[index + 1];
+			if(len - 1 == nonCliqueVerticesSize && nonCliqueVerticesSize == sizeOfClique){
+				res += 1;
+			}
+			else {
+				res += binorm(len - 1 - nonCliqueVerticesSize, sizeOfClique - nonCliqueVerticesSize);
+			}
+			index += len + 1;
+		}
 		return res;
 	}
 	
@@ -82,6 +133,9 @@ public class CliqueEncoder{
 			return 0;
 		}
 		long res = 1;
+		if(d == 0 || n == d){
+			return res;
+		}
 		for (int i = 0; i < d; ++i) {
 			res *= (n - i);
 		}

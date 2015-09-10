@@ -7,7 +7,9 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -50,7 +52,12 @@ public class EnumSquare {
 		}
 		
 		Configuration conf = new Configuration();
-		DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/nonsmallneigh"), conf);
+		
+		FileStatus[] files = Utility.getFS().listStatus(new Path(workDir + "nonsmallneigh"));
+		for(FileStatus f : files){
+			DistributedCache.addCacheFile(f.getPath().toUri(), conf);
+		}
+		//DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/nonsmallneigh"), conf);
 		
 		conf.setInt("mapred.input.max.size", maxSize);
 		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
@@ -201,7 +208,7 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 		// TODO Auto-generated method stub
 		Configuration conf = context.getConfiguration();
 		maxSize = conf.getInt("mapred.input.max.size", 0);
-		FileSystem fs = FileSystem.get(conf);
+		LocalFileSystem fs = new LocalFileSystem();
 
 		Path[] paths = DistributedCache.getLocalCacheFiles(conf);
 		enableBF = conf.getBoolean("enable.bloom.filter", false);

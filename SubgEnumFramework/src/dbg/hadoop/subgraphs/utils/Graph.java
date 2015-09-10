@@ -1,9 +1,11 @@
 package dbg.hadoop.subgraphs.utils;
 
 import gnu.trove.iterator.TLongIterator;
+import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.map.hash.TLongLongHashMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedWriter;
@@ -11,7 +13,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,21 +20,27 @@ import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.Random;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
 
 public class Graph{
 	private static Logger log = Logger.getLogger(Graph.class);
 	private long unorientedSize=0;
 	private long orientedSize=0;
+	//private TLongLongHashMap cliqueMap = null;
+	private TLongHashSet cliqueSet = null;
 
 	//HashMap<String, HashSet<String>> graph = new HashMap<String, HashSet<String>>();  
 	//HashMap<String, Integer> degrees =new HashMap<String, Integer>();
 	
-	HashMap<Long, TLongHashSet> graph = new HashMap<Long, TLongHashSet>();
+	HashMap<Long, TLongHashSet> graph = null;
 	// This is the degree of current induced subgraphs.
 	// The original degree is encapsulated with the long-vertex index
-	TLongIntHashMap degrees = new TLongIntHashMap();
+	TLongIntHashMap degrees = null;
+	
+	public Graph() {
+		graph = new HashMap<Long, TLongHashSet>();
+		degrees = new TLongIntHashMap();
+	}
 
 	public class GraphNodeComparator implements Comparator<Long> {
 		private TLongIntHashMap deg;
@@ -60,6 +67,10 @@ public class Graph{
 
 	}
 	
+	public void setLocalCliqueSet(TLongHashSet set) {
+		this.cliqueSet = set;
+	}
+	
 	public int getNodesNumber() {
 		return this.graph.keySet().size();
 	}
@@ -69,6 +80,17 @@ public class Graph{
 		Iterator<Long> iter = this.graph.keySet().iterator();
 		while(iter.hasNext()){
 			l.add(iter.next());
+		}
+		return l; 
+	}
+	
+	public TLongArrayList getNonCliqueNodeList() {
+		TLongArrayList l = new TLongArrayList();
+		Iterator<Long> iter = this.graph.keySet().iterator();
+		while(iter.hasNext()){
+			long a = iter.next();
+			if(!cliqueSet.contains(a))
+				l.add(a);
 		}
 		return l; 
 	}
@@ -83,14 +105,99 @@ public class Graph{
 		filtered.add(array, index, array.length - index);
 		return filtered; 
 	}
+	
+	public TLongArrayList getNonCliqueLargerNeighbors(long a, TLongObjectHashMap<Boolean> map) {
+		TLongArrayList filtered = new TLongArrayList();
+		TLongArrayList neigh = this.getAdjList(a);
+		TLongIterator iter = neigh.iterator();
+		while(iter.hasNext()){
+			long v = iter.next();
+			if(v > a && !this.cliqueSet.contains(v)){
+				if(map == null || (map.contains(v) && map.get(v)))
+					filtered.add(v);
+			}
+		}
+		filtered.sort();
+		return filtered; 
+	}
 
-	private boolean checkPreviousAreAdjacent(TLongArrayList nodes, int [] indexes, int upTo) {
+	private boolean checkPreviousAreAdjacent(TLongArrayList nodes, 
+			int [] indexes, int upTo) {
 		for (int i = 0; i< upTo; ++i) {
 			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) return false;
 		}
 		return true;
 	}
+	
+	/**
+	 * Check the availability of the new vertex to form cliques with already-found vertices. <br>
+	 * Suppose we want to find k-clique, and there are r vertices outside a large local clique. <br>
+	 * We have to check the following two conditions hold, <br>
+	 * 1. The r vertices form a r-clique; <br>
+	 * 2. The r vertices has at least k - r common neighbors in the local clique, so that together with
+	 * the common neighbors, they can form a k-clique
+	 * @param nodes
+	 * @param indexes
+	 * @param upTo
+	 * @param curCliqueSize r
+	 * @param toEnumCliqueSize k
+	 * @param commonNeighbors The common neighbors in the local clique in the previous r-1 vertices
+	 * @return Boolean availability
+	 */
+	/*
+	private boolean checkPreviousAreAvailable (TLongArrayList nodes, int[] indexes, int upTo,
+			int curCliqueSize, int toEnumCliqueSize, TLongHashSet commonNeighbors) {
+		boolean isAvailable = this.checkPreviousAreAdjacent(nodes, indexes, upTo);
+		if (curCliqueSize < toEnumCliqueSize) {
+			int curSize = commonNeighbors.size();
+			if (isAvailable) {
+				for (long cliqueVertex : commonNeighbors.toArray()) {
+					if (!this.hasNeighbor(nodes.get(indexes[upTo]), cliqueVertex)) {
+						--curSize;
+					}
+				}
+				isAvailable = curSize >= (toEnumCliqueSize - curCliqueSize);
+			}
+		}
+		return isAvailable;
+	}*/
+	
+	private void addCommonCliqueNeighbors(long curVertex, TLongHashSet commonNeighbors) {
+		TLongArrayList curNeighbors = this.getAdjList(curVertex);
+		TLongIterator iter = curNeighbors.iterator();
+		while(iter.hasNext()) {
+			long v = iter.next();
+			if(this.cliqueSet.contains(v)){
+				commonNeighbors.add(v);
+			}
+		}
+	}
+	
+	public long countTriangles () {
+		TLongArrayList l = this.getNodeList();
+		TLongArrayList neighbors; 
 
+		long countRunning=0;
+		TLongIterator it = l.iterator();		
+
+		long a,b,c;
+
+		while (it.hasNext()) {
+			a = it.next();
+			neighbors = this.getLargerNeighbors(a);
+			for (int i = 0; i < neighbors.size(); i++) {
+				b = neighbors.get(i);
+				for (int j = i + 1; j < neighbors.size(); j++) {
+					c = neighbors.get(j);
+					if (this.hasNeighbor(b, c))
+						countRunning++;
+				}
+			}
+		}
+		return countRunning;
+	}
+	
+	@Deprecated
 	public long countCliquesOfSize(int cliqueSize) {
 		TLongArrayList l = this.getNodeList();
 		TLongArrayList neighbors; 
@@ -103,20 +210,13 @@ public class Graph{
 		while(it.hasNext()){
 			a=it.next();
 			neighbors = this.getLargerNeighbors(a);
-
 			if(neighbors.size() >= cliqueSize-1) {
-
 				indexes[0] = 0;
 				int fixing = 0;
 				boolean failure = false;
-
-
-				while(fixing>=0) {
-
+				while (fixing >= 0) {
 					while (!failure) {
-
 						while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)){
-
 							indexes[fixing]++;
 							if (!(indexes[fixing]<(neighbors.size()-(indexes.length  - fixing - 1)))) {
 								failure=true;
@@ -136,7 +236,6 @@ public class Graph{
 							}
 						}
 					}
-
 					fixing--;
 					if(fixing>=0) {
 						indexes[fixing]++;
@@ -145,7 +244,6 @@ public class Graph{
 				}
 			}
 		}
-
 		return countRunning;
 	}
 	
@@ -154,7 +252,8 @@ public class Graph{
 	   * The clique has curV as the minimum vertex, and when 
 	   * finding k-clique, we simply find (k-1)-clique around curV's neighbors.
 	   */
-	public long[] enumCliqueOfSize(int cliqueSize, long curV, TLongLongHashMap cliqueMap) {
+	@Deprecated
+	public long[] enumCliqueOfSize(int cliqueSize, long curV) {
 		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize);
 		TLongArrayList l = this.getNodeList();
 		TLongArrayList neighbors = null;
@@ -165,21 +264,9 @@ public class Graph{
 		long a = 0L;
 		long countRunning = 0L;
 
-		boolean addingLargeClique = false;
-		long curVertexClique = -1;
-		if (cliqueMap != null) {
-			if (cliqueMap.containsKey(curV)) {
-				curVertexClique = cliqueMap.get(curV);
-				addingLargeClique = true;
-			}
-		}
-
 		while (it.hasNext()) {
 			a = it.next();
 			curClique[0] = a;
-			if (addingLargeClique) {
-				addingLargeClique = (cliqueMap.get(a) == curVertexClique);
-			}
 			neighbors = this.getLargerNeighbors(a);
 			if (neighbors.size() >= cliqueSize - 1) {
 				indexes[0] = 0;
@@ -206,14 +293,8 @@ public class Graph{
 								}
 								for (int i = 1; i < cliqueSize; ++i) {
 									curClique[i] = neighbors.get(indexes[i - 1]);
-									if (addingLargeClique)
-										addingLargeClique = (cliqueMap.get(curClique[i]) == curVertexClique);
 								}
-								if (addingLargeClique) {
-									encoder.addCliqueVertex(curClique);
-								} else {
-									encoder.addNormalVertices(curClique);
-								}
+								encoder.addNormalVertices(curClique);
 								indexes[fixing] += 1;
 							}
 							if (!(indexes[fixing] < (neighbors.size() - (indexes.length
@@ -233,31 +314,161 @@ public class Graph{
 		}
 		return encoder.getEncodedCliques();
 	}
-
-	public long countTriangles () {
-		TLongArrayList l = this.getNodeList();
-		TLongArrayList neighbors; 
-
-		long countRunning=0;
-		TLongIterator it = l.iterator();		
-
-		long a,b,c;
-
-		while (it.hasNext()) {
-			a = it.next();
-			neighbors = this.getLargerNeighbors(a);
-			for (int i = 0; i < neighbors.size(); i++) {
-				b = neighbors.get(i);
-				for (int j = i + 1; j < neighbors.size(); j++) {
-					c = neighbors.get(j);
-					if (this.hasNeighbor(b, c))
-						countRunning++;
-				}
+	
+	/**
+	 * New API.
+	 * Using the cliqueMap to save useless enumeration
+	 * @param cliqueSize
+	 * @param curV
+	 * @return
+	 */
+	public long[] enumClique(int cliqueSize, long curV, boolean countOnly) {
+		assert(this.cliqueSet != null);
+		if(cliqueSet.size() == 0) {
+			if(countOnly) {
+				long[] res = new long[1];
+				res[0] = this.countCliquesOfSize(cliqueSize);
+				return res;
+			}
+			else {
+				return this.enumCliqueOfSize(cliqueSize, curV);
 			}
 		}
-		return countRunning;
-	}
+		
+		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
+		TLongArrayList l = this.getNonCliqueNodeList();
+		
+		//TLongObjectHashMap<Boolean> validVertexMap = new TLongObjectHashMap<Boolean>();
+		
+		TLongIterator it = null;
+		TLongArrayList neighbors = null;
+		TLongHashSet commonNeighbors = new TLongHashSet();
+		int k = 2;
+		long countRunning = 0L;
 
+		while (k <= cliqueSize) {
+			it = l.iterator();
+			int[] indexes = new int[k - 1];
+			long[] curClique = new long[k];
+			long a = 0L;
+			while (it.hasNext()) {
+				a = it.next();
+				//if(k == 2) {
+				//	validVertexMap.put(a, true);
+					//neighbors = this.getNonCliqueLargerNeighbors(a, null);
+				//}
+				//else {
+				//	if(!validVertexMap.get(a)) {
+				//		continue;
+				//	}
+					//neighbors = this.getNonCliqueLargerNeighbors(a, validVertexMap);
+				//}
+				neighbors = this.getNonCliqueLargerNeighbors(a, null);
+				commonNeighbors.clear();
+				curClique[0] = a;
+
+				this.addCommonCliqueNeighbors(a, commonNeighbors);
+				if( k == 2 && commonNeighbors.size() >= cliqueSize - 1){
+					long[] single = { a };
+					if(!countOnly) {
+						encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
+					}
+					countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
+				}
+				if(commonNeighbors.size() < cliqueSize - k){
+					continue;
+				}
+				
+				if (neighbors.size() >= k - 1) {
+					indexes[0] = 0;
+					int fixing = 0;
+					boolean failure = false;
+					while (fixing >= 0) {
+						while (!failure) {
+							while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
+								//validVertexMap.put(neighbors.get(indexes[fixing]), false);
+								indexes[fixing] += 1;
+								if (!(indexes[fixing] < (neighbors.size() - (indexes.length
+										- fixing - 1)))) {
+									failure = true;
+								}
+							}
+							if (!failure) {
+								if (fixing + 1 < indexes.length) {
+									fixing += 1;
+									indexes[fixing] = indexes[fixing - 1] + 1;
+								} else {
+									TLongHashSet curCommonNeighbors = new TLongHashSet();
+									curCommonNeighbors.addAll(commonNeighbors);
+									// These vertices can form a k-clique, so they are the candidates
+									// for forming (k + 1) - clique
+									//validVertexMap.put(curClique[0], true);
+									for (int i = 1; i < k; ++i) {
+										curClique[i] = neighbors.get(indexes[i - 1]);
+										// validVertexMap.put(curClique[i], true);
+										// Check the common neighbos in the clique set
+										if (k != cliqueSize) {
+											for (long cliqueVertex : curCommonNeighbors.toArray()) {
+												if (!this.hasNeighbor(curClique[i], cliqueVertex)) {
+													curCommonNeighbors.remove(cliqueVertex);
+												}
+											}
+											if(curCommonNeighbors.size() < cliqueSize - k) {
+												break;
+											}
+										}
+									}
+									if(k == cliqueSize) {
+										countRunning += 1;
+										if(!countOnly) {
+											encoder.addNormalVerticesWithCompress(curClique, k, null);
+										}
+									}
+									else {
+										if(curCommonNeighbors.size() >= cliqueSize - k) {
+											countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
+													cliqueSize - k);
+											if(!countOnly){
+												encoder.addNormalVerticesWithCompress(curClique, k, 
+													curCommonNeighbors.toArray());
+											}
+										}
+									}
+									indexes[fixing] += 1;
+								}
+								if (!(indexes[fixing] < (neighbors.size() - (indexes.length
+										- fixing - 1)))) {
+									failure = true;
+								}
+							}
+						}
+						fixing -= 1;
+						if (fixing >= 0) {
+							indexes[fixing] += 1;
+							failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
+									- fixing - 1))));
+						}
+					}
+				}
+			}
+			k += 1;
+		}
+		
+		if(cliqueSet.size() >= cliqueSize) {
+			countRunning += CliqueEncoder.binorm(cliqueSet.size(), cliqueSize);
+			if(!countOnly)
+				encoder.addCliqueVertex(cliqueSet.toArray());
+		}
+		long[] res = null;
+		if(!countOnly)
+			res = encoder.getEncodedCliques();
+		else {
+			res = new long[1];
+			res[0] = countRunning;
+		}
+		return res;
+	}
+	
 
 	public int getNodeDegree(long a) {
 		Integer deg = degrees.get(a);
