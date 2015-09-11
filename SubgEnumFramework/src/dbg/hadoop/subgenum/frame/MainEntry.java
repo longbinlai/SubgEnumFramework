@@ -73,8 +73,8 @@ public class MainEntry{
 			
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-" + inputInfo.cliqueNumVertices + "clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
-			if(inputInfo.isEnumCliqueV2)
-				EnumCliqueV2.countOnce(inputInfo);
+			if(inputInfo.isResultCompression)
+				EnumCliqueV2.countOnce(inputInfo); // V2 is the compress version
 			else
 				EnumClique.countOnce(inputInfo);
 		}
