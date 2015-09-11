@@ -106,14 +106,14 @@ public class Graph{
 		return filtered; 
 	}
 	
-	public TLongArrayList getNonCliqueLargerNeighbors(long a, TLongObjectHashMap<Boolean> map) {
+	public TLongArrayList getNonCliqueLargerNeighbors(long a, TLongHashSet validSet) {
 		TLongArrayList filtered = new TLongArrayList();
 		TLongArrayList neigh = this.getAdjList(a);
 		TLongIterator iter = neigh.iterator();
 		while(iter.hasNext()){
 			long v = iter.next();
 			if(v > a && !this.cliqueSet.contains(v)){
-				if(map == null || (map.contains(v) && map.get(v)))
+				if(validSet == null || validSet.contains(v))
 					filtered.add(v);
 			}
 		}
@@ -124,44 +124,12 @@ public class Graph{
 	private boolean checkPreviousAreAdjacent(TLongArrayList nodes, 
 			int [] indexes, int upTo) {
 		for (int i = 0; i< upTo; ++i) {
-			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) return false;
+			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) 
+				return false;
 		}
 		return true;
 	}
-	
-	/**
-	 * Check the availability of the new vertex to form cliques with already-found vertices. <br>
-	 * Suppose we want to find k-clique, and there are r vertices outside a large local clique. <br>
-	 * We have to check the following two conditions hold, <br>
-	 * 1. The r vertices form a r-clique; <br>
-	 * 2. The r vertices has at least k - r common neighbors in the local clique, so that together with
-	 * the common neighbors, they can form a k-clique
-	 * @param nodes
-	 * @param indexes
-	 * @param upTo
-	 * @param curCliqueSize r
-	 * @param toEnumCliqueSize k
-	 * @param commonNeighbors The common neighbors in the local clique in the previous r-1 vertices
-	 * @return Boolean availability
-	 */
-	/*
-	private boolean checkPreviousAreAvailable (TLongArrayList nodes, int[] indexes, int upTo,
-			int curCliqueSize, int toEnumCliqueSize, TLongHashSet commonNeighbors) {
-		boolean isAvailable = this.checkPreviousAreAdjacent(nodes, indexes, upTo);
-		if (curCliqueSize < toEnumCliqueSize) {
-			int curSize = commonNeighbors.size();
-			if (isAvailable) {
-				for (long cliqueVertex : commonNeighbors.toArray()) {
-					if (!this.hasNeighbor(nodes.get(indexes[upTo]), cliqueVertex)) {
-						--curSize;
-					}
-				}
-				isAvailable = curSize >= (toEnumCliqueSize - curCliqueSize);
-			}
-		}
-		return isAvailable;
-	}*/
-	
+
 	private void addCommonCliqueNeighbors(long curVertex, TLongHashSet commonNeighbors) {
 		TLongArrayList curNeighbors = this.getAdjList(curVertex);
 		TLongIterator iter = curNeighbors.iterator();
@@ -337,120 +305,151 @@ public class Graph{
 		
 		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
 		TLongArrayList l = this.getNonCliqueNodeList();
-		
-		//TLongObjectHashMap<Boolean> validVertexMap = new TLongObjectHashMap<Boolean>();
-		
+
 		TLongIterator it = null;
 		TLongArrayList neighbors = null;
 		TLongHashSet commonNeighbors = new TLongHashSet();
-		int k = 2;
+		TLongHashSet curCommonNeighbors = new TLongHashSet();
+
 		long countRunning = 0L;
+		TLongHashSet validSetPrev = new TLongHashSet();
+		TLongHashSet validSetCur = new TLongHashSet();
+		
+		int k = 2;
 
 		while (k <= cliqueSize) {
 			it = l.iterator();
 			int[] indexes = new int[k - 1];
 			long[] curClique = new long[k];
 			long a = 0L;
+			if(validSetCur.size() != 0) {
+				validSetPrev.clear();
+				validSetPrev.addAll(validSetCur);
+				validSetCur.clear();
+			}
+			
 			while (it.hasNext()) {
-				a = it.next();
-				//if(k == 2) {
-				//	validVertexMap.put(a, true);
-					//neighbors = this.getNonCliqueLargerNeighbors(a, null);
-				//}
-				//else {
-				//	if(!validVertexMap.get(a)) {
-				//		continue;
-				//	}
-					//neighbors = this.getNonCliqueLargerNeighbors(a, validVertexMap);
-				//}
-				neighbors = this.getNonCliqueLargerNeighbors(a, null);
+				a = it.next();			
 				commonNeighbors.clear();
 				curClique[0] = a;
 
 				this.addCommonCliqueNeighbors(a, commonNeighbors);
-				if( k == 2 && commonNeighbors.size() >= cliqueSize - 1){
-					long[] single = { a };
-					if(!countOnly) {
-						encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
-					}
-					countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
-				}
-				if(commonNeighbors.size() < cliqueSize - k){
-					continue;
-				}
 				
-				if (neighbors.size() >= k - 1) {
-					indexes[0] = 0;
-					int fixing = 0;
-					boolean failure = false;
-					while (fixing >= 0) {
-						while (!failure) {
-							while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
-								//validVertexMap.put(neighbors.get(indexes[fixing]), false);
-								indexes[fixing] += 1;
-								if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-									failure = true;
+				if( k == 2 ) {
+					validSetPrev.add(a);
+					if(commonNeighbors.size() >= cliqueSize - 1) {
+						long[] single = { a };
+						if(!countOnly) {
+							encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
+						}
+						countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
+					}
+					if(commonNeighbors.size() >= cliqueSize - 2) {
+						neighbors = this.getNonCliqueLargerNeighbors(a, null);
+
+						for(long neigh : neighbors.toArray()) {
+							curClique[1] = neigh;
+							curCommonNeighbors.clear();
+							curCommonNeighbors.addAll(commonNeighbors);
+							for (long cliqueVertex : commonNeighbors.toArray()) {
+								if (!this.hasNeighbor(cliqueVertex, curClique[1])) {
+									curCommonNeighbors.remove(cliqueVertex);
 								}
 							}
-							if (!failure) {
-								if (fixing + 1 < indexes.length) {
-									fixing += 1;
-									indexes[fixing] = indexes[fixing - 1] + 1;
-								} else {
-									TLongHashSet curCommonNeighbors = new TLongHashSet();
-									curCommonNeighbors.addAll(commonNeighbors);
-									// These vertices can form a k-clique, so they are the candidates
-									// for forming (k + 1) - clique
-									//validVertexMap.put(curClique[0], true);
-									for (int i = 1; i < k; ++i) {
-										curClique[i] = neighbors.get(indexes[i - 1]);
-										// validVertexMap.put(curClique[i], true);
-										// Check the common neighbos in the clique set
-										if (k != cliqueSize) {
-											for (long cliqueVertex : curCommonNeighbors.toArray()) {
-												if (!this.hasNeighbor(curClique[i], cliqueVertex)) {
-													curCommonNeighbors.remove(cliqueVertex);
-												}
-											}
-											if(curCommonNeighbors.size() < cliqueSize - k) {
-												break;
-											}
-										}
-									}
-									if(k == cliqueSize) {
-										countRunning += 1;
-										if(!countOnly) {
-											encoder.addNormalVerticesWithCompress(curClique, k, null);
-										}
-									}
-									else {
-										if(curCommonNeighbors.size() >= cliqueSize - k) {
-											countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
-													cliqueSize - k);
-											if(!countOnly){
-												encoder.addNormalVerticesWithCompress(curClique, k, 
-													curCommonNeighbors.toArray());
-											}
-										}
-									}
-									indexes[fixing] += 1;
+							if(curCommonNeighbors.size() >= cliqueSize - 2) {
+								if(!countOnly) {
+									encoder.addNormalVerticesWithCompress(curClique, 2, 
+										curCommonNeighbors.toArray());
 								}
-								if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-									failure = true;
-								}
+								countRunning += CliqueEncoder.binorm(
+										curCommonNeighbors.size(), cliqueSize - 2);
 							}
 						}
-						fixing -= 1;
-						if (fixing >= 0) {
-							indexes[fixing] += 1;
-							failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
+					}
+				} else {
+					neighbors = this.getNonCliqueLargerNeighbors(a, validSetPrev);
+					
+					if(commonNeighbors.size() < cliqueSize - k){
+						continue;
+					}
+				
+					if (neighbors.size() >= k - 1) {
+						indexes[0] = 0;
+						int fixing = 0;
+						boolean failure = false;
+						while (fixing >= 0) {
+							while (!failure) {
+								while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
+									indexes[fixing] += 1;
+									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
+										- fixing - 1)))) {
+										failure = true;
+									}
+								}
+								if (!failure) {
+									if (fixing + 1 < indexes.length) {
+										fixing += 1;
+										indexes[fixing] = indexes[fixing - 1] + 1;
+									} else {
+										curCommonNeighbors.clear();
+										curCommonNeighbors.addAll(commonNeighbors);
+										// These vertices can form a k-clique, so they are the candidates
+										// for forming (k + 1) - clique
+										if(k != cliqueSize) {
+											validSetCur.add(curClique[0]);
+											for (int i = 1; i < k; ++i) {
+												validSetCur.add(neighbors.get(indexes[i - 1]));
+											}
+										}
+										
+										for (int i = 1; i < k; ++i) {
+											curClique[i] = neighbors.get(indexes[i - 1]);								
+											if (k != cliqueSize) {
+												for (long cliqueVertex : curCommonNeighbors.toArray()) {
+													if (!this.hasNeighbor(cliqueVertex, curClique[i])) {
+														curCommonNeighbors.remove(cliqueVertex);
+													}
+												}
+												if(curCommonNeighbors.size() < cliqueSize - k) {
+													break;
+												}
+											}
+										}
+										if(k == cliqueSize) {
+											countRunning += 1;
+											if(!countOnly) {
+												encoder.addNormalVerticesWithCompress(curClique, k, null);
+											}
+										}
+										else {
+											if(curCommonNeighbors.size() >= cliqueSize - k) {
+												countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
+													cliqueSize - k);
+												if(!countOnly){
+													encoder.addNormalVerticesWithCompress(curClique, k, 
+															curCommonNeighbors.toArray());
+												}
+											}
+										}
+										indexes[fixing] += 1;
+									}
+									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
+										- fixing - 1)))) {
+										failure = true;
+									}
+								}
+							}
+							fixing -= 1;
+							if (fixing >= 0) {
+								indexes[fixing] += 1;
+								failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
 									- fixing - 1))));
+							}
 						}
 					}
 				}
 			}
+			
 			k += 1;
 		}
 		

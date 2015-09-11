@@ -124,15 +124,21 @@ class EnumCliqueV2EnumReducer extends
 						&& cliqueMap.get(_key.get()) == cliqueMap.get(v1);
 			}
 			if (!noAddEdge) {
+				//if(HyperVertex.VertexID(_key.get()) == 112505) {
+				//	System.out.println("Edge: " + HyperVertex.toString(v1) + "," 
+				//			+ HyperVertex.toString(v2));
+				//}
 				g.addEdge(v1, v2);
 			} else {
-				if (!localCliqueSet.contains(v1))
-					localCliqueSet.add(v1);
-				if (!localCliqueSet.contains(v2))
-					localCliqueSet.add(v2);
+				//if(HyperVertex.VertexID(_key.get()) == 112505) {
+				//	System.out.println("LocalSet: " + HyperVertex.toString(v1) + "," 
+				//			+ HyperVertex.toString(v2));
+				//}
+				localCliqueSet.add(v1);
+				localCliqueSet.add(v2);
 			}
 		}
-
+		
 		if(localCliqueSet.size() <= 20){
 			//log.info("Add large local clique set with size : " + localCliqueSet.size());
 			long[] array = localCliqueSet.toArray();
