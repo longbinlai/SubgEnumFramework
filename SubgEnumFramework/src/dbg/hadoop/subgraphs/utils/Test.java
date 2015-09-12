@@ -18,7 +18,27 @@ import java.util.Iterator;
 import dbg.hadoop.subgraphs.io.HVArray;
 
 public class Test{
+	
 	private static TLongHashSet cliqueSet = new TLongHashSet();
+	
+	private static void findSubsets(long array[]) {
+		int numOfSubsets = 1 << array.length;
+
+		for (int i = 0; i < numOfSubsets; i++) {
+			int pos = array.length - 1;
+			int bitmask = i;
+
+			System.out.print("{");
+			while (bitmask > 0) {
+				if ((bitmask & 1) == 1)
+					System.out.print(array[pos] + ",");
+				bitmask >>= 1;
+				pos--;
+			}
+			System.out.print("}");
+		}
+	}
+	
 	public static void main(String[] args) 
 			throws InstantiationException, IllegalAccessException, IOException{
 
@@ -61,9 +81,22 @@ public class Test{
 		g1.setLocalCliqueSet(new TLongHashSet());
 		g2.setLocalCliqueSet(set);
 		
+		long start = System.currentTimeMillis();
 		long[] res1 = g1.enumClique(4, 0, false);
-		long[] res2 = g2.enumClique(4, 0, false);
+		long end = System.currentTimeMillis();
 		
+		System.out.println("Method 1, Elapsed time : " +(end - start));
+		
+		start = System.currentTimeMillis();
+		long[] res2 = g2.enumClique(4, 0, false);
+		end = System.currentTimeMillis();
+		
+		System.out.println("Method 2, Elapsed time : " +(end - start));
+		
+		long[] test = { 1, 2, 3, 4 };
+		findSubsets(test);
+		
+		/*
 		int i = 2;
 		int size = (int)res2[2];
 		
@@ -77,6 +110,7 @@ public class Test{
 						for(int k = j + 1; k < array.length - 1; ++k) {
 							for(int s = k + 1; s < array.length; ++s) {
 								long[] clique = { array[t], array[j], array[k], array[s] };
+								
 								hashSet.add(HyperVertex.HVArrayToString(clique));
 							}
 						}
@@ -97,7 +131,6 @@ public class Test{
 										cliqueNodes[k], cliqueNodes[s] };
 								Arrays.sort(clique);
 								hashSet.add(HyperVertex.HVArrayToString(clique));
-								
 							}
 						}
 					}
@@ -136,6 +169,7 @@ public class Test{
 				System.out.println(HyperVertex.HVArrayToString(array));
 			}
 		}
+
 		
 		System.out.println();
 		
@@ -143,6 +177,8 @@ public class Test{
 		System.out.println(HyperVertex.HVArrayToString(res2));
 		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res1));
 		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res2));
+		*/
+		
 	}
 	
 }

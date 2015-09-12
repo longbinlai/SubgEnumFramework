@@ -282,8 +282,8 @@ public class Graph{
 		}
 		return encoder.getEncodedCliques();
 	}
-	
-	/**
+
+		/**
 	 * New API.
 	 * Using the cliqueMap to save useless enumeration
 	 * @param cliqueSize
@@ -307,225 +307,39 @@ public class Graph{
 		TLongArrayList l = this.getNonCliqueNodeList();
 
 		TLongIterator it = null;
-		TLongArrayList neighbors = null;
+		TLongArrayList neighbors = new TLongArrayList();
 		TLongHashSet commonNeighbors = new TLongHashSet();
 		TLongHashSet curCommonNeighbors = new TLongHashSet();
 
 		long countRunning = 0L;
-		TLongHashSet validSetPrev = new TLongHashSet();
 		TLongHashSet validSetCur = new TLongHashSet();
 		
 		int k = 2;
-
-		while (k <= cliqueSize) {
-			it = l.iterator();
-			int[] indexes = new int[k - 1];
-			long[] curClique = new long[k];
-			long a = 0L;
-			if(validSetCur.size() != 0) {
-				validSetPrev.clear();
-				validSetPrev.addAll(validSetCur);
-				validSetCur.clear();
-			}
-			
-			while (it.hasNext()) {
-				a = it.next();			
-				commonNeighbors.clear();
-				curClique[0] = a;
-
-				this.addCommonCliqueNeighbors(a, commonNeighbors);
-				
-				if( k == 2 ) {
-					validSetPrev.add(a);
-					if(commonNeighbors.size() >= cliqueSize - 1) {
-						long[] single = { a };
-						if(!countOnly) {
-							encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
-						}
-						countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
-					}
-					if(commonNeighbors.size() >= cliqueSize - 2) {
-						neighbors = this.getNonCliqueLargerNeighbors(a, null);
-
-						for(long neigh : neighbors.toArray()) {
-							curClique[1] = neigh;
-							curCommonNeighbors.clear();
-							curCommonNeighbors.addAll(commonNeighbors);
-							for (long cliqueVertex : commonNeighbors.toArray()) {
-								if (!this.hasNeighbor(cliqueVertex, curClique[1])) {
-									curCommonNeighbors.remove(cliqueVertex);
-								}
-							}
-							if(curCommonNeighbors.size() >= cliqueSize - 2) {
-								if(!countOnly) {
-									encoder.addNormalVerticesWithCompress(curClique, 2, 
-										curCommonNeighbors.toArray());
-								}
-								countRunning += CliqueEncoder.binorm(
-										curCommonNeighbors.size(), cliqueSize - 2);
-							}
-						}
-					}
-				} else {
-					neighbors = this.getNonCliqueLargerNeighbors(a, validSetPrev);
-					
-					if(commonNeighbors.size() < cliqueSize - k){
-						continue;
-					}
-				
-					if (neighbors.size() >= k - 1) {
-						indexes[0] = 0;
-						int fixing = 0;
-						boolean failure = false;
-						while (fixing >= 0) {
-							while (!failure) {
-								while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
-									indexes[fixing] += 1;
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-								if (!failure) {
-									if (fixing + 1 < indexes.length) {
-										fixing += 1;
-										indexes[fixing] = indexes[fixing - 1] + 1;
-									} else {
-										curCommonNeighbors.clear();
-										curCommonNeighbors.addAll(commonNeighbors);
-										// These vertices can form a k-clique, so they are the candidates
-										// for forming (k + 1) - clique
-										if(k != cliqueSize) {
-											validSetCur.add(curClique[0]);
-											for (int i = 1; i < k; ++i) {
-												validSetCur.add(neighbors.get(indexes[i - 1]));
-											}
-										}
-										
-										for (int i = 1; i < k; ++i) {
-											curClique[i] = neighbors.get(indexes[i - 1]);								
-											if (k != cliqueSize) {
-												for (long cliqueVertex : curCommonNeighbors.toArray()) {
-													if (!this.hasNeighbor(cliqueVertex, curClique[i])) {
-														curCommonNeighbors.remove(cliqueVertex);
-													}
-												}
-												if(curCommonNeighbors.size() < cliqueSize - k) {
-													break;
-												}
-											}
-										}
-										if(k == cliqueSize) {
-											countRunning += 1;
-											if(!countOnly) {
-												encoder.addNormalVerticesWithCompress(curClique, k, null);
-											}
-										}
-										else {
-											if(curCommonNeighbors.size() >= cliqueSize - k) {
-												countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
-													cliqueSize - k);
-												if(!countOnly){
-													encoder.addNormalVerticesWithCompress(curClique, k, 
-															curCommonNeighbors.toArray());
-												}
-											}
-										}
-										indexes[fixing] += 1;
-									}
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-							}
-							fixing -= 1;
-							if (fixing >= 0) {
-								indexes[fixing] += 1;
-								failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
-									- fixing - 1))));
-							}
-						}
-					}
-				}
-			}
-			
-			k += 1;
-		}
-		
-		if(cliqueSet.size() >= cliqueSize) {
-			countRunning += CliqueEncoder.binorm(cliqueSet.size(), cliqueSize);
-			if(!countOnly)
-				encoder.addCliqueVertex(cliqueSet.toArray());
-		}
-		long[] res = null;
-		if(!countOnly)
-			res = encoder.getEncodedCliques();
-		else {
-			res = new long[1];
-			res[0] = countRunning;
-		}
-		return res;
-	}
-
-		/**
-	 * New API.
-	 * Using the cliqueMap to save useless enumeration
-	 * @param cliqueSize
-	 * @param curV
-	 * @return
-	 */
-	public long[] enumCliqueNew(int cliqueSize, long curV, boolean countOnly) {
-		assert(this.cliqueSet != null);
-		if(cliqueSet.size() == 0) {
-			if(countOnly) {
-				long[] res = new long[1];
-				res[0] = this.countCliquesOfSize(cliqueSize);
-				return res;
-			}
-			else {
-				return this.enumCliqueOfSize(cliqueSize, curV);
-			}
-		}
-		
-		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
-		TLongArrayList l = this.getNonCliqueNodeList();
-
-		TLongIterator it = null;
-		TLongArrayList neighbors = null;
-		TLongHashSet commonNeighbors = new TLongHashSet();
-		TLongHashSet curCommonNeighbors = new TLongHashSet();
-
-		long countRunning = 0L;
-		TLongHashSet validSetPrev = new TLongHashSet();
-		TLongHashSet validSetCur = new TLongHashSet();
-		
-		int k = 2;
-
-		//while (k <= cliqueSize) {
 		it = l.iterator();
-		int[] indexes = new int[k - 1];
-		long[] curClique = new long[k];
+		
 		long a = 0L;
-		validSetPrev.clear();
-		validSetCur.clear();
 			
 		while (it.hasNext()) {
 			k = 2;
-			a = it.next();			
+			a = it.next();
+			//validSetPrev.clear();
+			neighbors.clear();
+			validSetCur.clear();
 			commonNeighbors.clear();
-			curClique[0] = a;
-
 			this.addCommonCliqueNeighbors(a, commonNeighbors);
 
 			while(k <= cliqueSize) {
+				int[] indexes = new int[k - 1];
+				long[] curClique = new long[k];
+				
+				curClique[0] = a;
 		        if(validSetCur.size() != 0) {
-			        validSetPrev.clear();
-			        validSetPrev.addAll(validSetCur);
+			        neighbors.clear();
+			        neighbors.addAll(validSetCur);
+			        neighbors.sort();
 			        validSetCur.clear();
 		        }
 				if( k == 2 ) {
-					//validSetPrev.add(a);
 					if(commonNeighbors.size() >= cliqueSize - 1) {
 						long[] single = { a };
 						if(!countOnly) {
@@ -535,7 +349,6 @@ public class Graph{
 					}
 
 				    neighbors = this.getNonCliqueLargerNeighbors(a, null);
-					validSetPrev.addAll(neighbors);
 					if(commonNeighbors.size() >= cliqueSize - 2) {
 						for(long neigh : neighbors.toArray()) {
 							curClique[1] = neigh;
@@ -566,11 +379,11 @@ public class Graph{
 				} 
 				else {
 					if(commonNeighbors.size() < cliqueSize - k){
+						k += 1;
 						continue;
 					}
-					neighbors = new TLongArrayList(validSetPrev.toArray());
-					neighbors.sort();
-					
+					//neighbors = new TLongArrayList(validSetPrev.toArray());
+					//neighbors.sort();
 					if (neighbors.size() >= k - 1) {
 						indexes[0] = 0;
 						int fixing = 0;
@@ -594,7 +407,6 @@ public class Graph{
 										// These vertices can form a k-clique, so they are the candidates
 										// for forming (k + 1) - clique
 										if(k != cliqueSize) {
-											validSetCur.add(curClique[0]);
 											for (int i = 1; i < k; ++i) {
 												validSetCur.add(neighbors.get(indexes[i - 1]));
 											}

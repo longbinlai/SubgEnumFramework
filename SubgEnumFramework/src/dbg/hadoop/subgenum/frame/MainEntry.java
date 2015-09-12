@@ -66,7 +66,7 @@ public class MainEntry{
 			log.info("Start enumerating " + inputInfo.cliqueNumVertices + "-clique...");
 			startTime = System.currentTimeMillis();
 			
-			if(inputInfo.isEnumCliqueV2)
+			if(inputInfo.isResultCompression)
 				EnumCliqueV2.run(inputInfo);
 			else
 				EnumClique.run(inputInfo);

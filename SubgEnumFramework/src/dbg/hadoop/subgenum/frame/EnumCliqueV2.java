@@ -106,8 +106,6 @@ class EnumCliqueV2EnumReducer extends
 	@Override
 	public void reduce(LongWritable _key, Iterable<HVArray> values,
 			Context context) throws IOException, InterruptedException {
-		//if (_key.get() == HyperVertex.get(100009, 15))
-		//	System.out.println("reduce ( " + HyperVertex.toString(_key.get()) + " )");
 		Graph g = new Graph();
 		localCliqueSet.clear();
 		int cnt = 0;
@@ -124,13 +122,13 @@ class EnumCliqueV2EnumReducer extends
 						&& cliqueMap.get(_key.get()) == cliqueMap.get(v1);
 			}
 			if (!noAddEdge) {
-				//if(HyperVertex.VertexID(_key.get()) == 112505) {
+				//if(HyperVertex.VertexID(_key.get()) == 29974) {
 				//	System.out.println("Edge: " + HyperVertex.toString(v1) + "," 
 				//			+ HyperVertex.toString(v2));
 				//}
 				g.addEdge(v1, v2);
 			} else {
-				//if(HyperVertex.VertexID(_key.get()) == 112505) {
+				//if(HyperVertex.VertexID(_key.get()) == 29974) {
 				//	System.out.println("LocalSet: " + HyperVertex.toString(v1) + "," 
 				//			+ HyperVertex.toString(v2));
 				//}
@@ -138,7 +136,10 @@ class EnumCliqueV2EnumReducer extends
 				localCliqueSet.add(v2);
 			}
 		}
-		
+		//if(localCliqueSet.size() > 20) {
+		//	System.out.println(HyperVertex.toString(_key.get()) + " has set size: " + localCliqueSet.size());
+		//}
+		/*
 		if(localCliqueSet.size() <= 20){
 			//log.info("Add large local clique set with size : " + localCliqueSet.size());
 			long[] array = localCliqueSet.toArray();
@@ -148,7 +149,7 @@ class EnumCliqueV2EnumReducer extends
 				}
 			}
 			localCliqueSet.clear();
-		}
+		}*/
 		g.setLocalCliqueSet(localCliqueSet);
 		
 		Configuration conf = context.getConfiguration();
