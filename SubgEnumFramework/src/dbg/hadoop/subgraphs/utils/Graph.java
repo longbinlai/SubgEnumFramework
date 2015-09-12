@@ -576,9 +576,9 @@ public class Graph{
 						k += 1;
 						continue;
 					}
-					if(!validNodeSetCur.isEmpty()) {
+					if(k > 3) {
 					    validNodeSetPrev.and(validNodeSetCur);
-					    validSetCur.clear();
+					    validNodeSetCur.clear();
 				    }
 					//neighbors = new TLongArrayList(validSetPrev.toArray());
 					//neighbors.sort();
