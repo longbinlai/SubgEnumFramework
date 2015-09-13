@@ -139,7 +139,6 @@ class EnumCliqueV2EnumReducer extends
 		//if(localCliqueSet.size() > 20) {
 		//	System.out.println(HyperVertex.toString(_key.get()) + " has set size: " + localCliqueSet.size());
 		//}
-		/*
 		if(localCliqueSet.size() <= 20){
 			//log.info("Add large local clique set with size : " + localCliqueSet.size());
 			long[] array = localCliqueSet.toArray();
@@ -149,7 +148,7 @@ class EnumCliqueV2EnumReducer extends
 				}
 			}
 			localCliqueSet.clear();
-		}*/
+		}
 		g.setLocalCliqueSet(localCliqueSet);
 		
 		Configuration conf = context.getConfiguration();

@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Random;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 
@@ -45,7 +46,76 @@ public class Test{
 		TLongHashSet set = new TLongHashSet();
 		Graph g1 = new Graph();
 		Graph g2 = new Graph();
+	
+		/*
+		set.add(8);
+		set.add(9);
+		set.add(10);
+		set.add(11);
+		set.add(12);
+		set.add(13);
+
+		g1.addEdge(1, 2);
+		g1.addEdge(1, 3);
+		g1.addEdge(1, 4);
+		g1.addEdge(2, 3);
+		g1.addEdge(2, 4);
+		g1.addEdge(3, 4);
 		
+		g2.addEdge(1, 2);
+		g2.addEdge(1, 3);
+		g2.addEdge(1, 4);
+		g2.addEdge(2, 3);
+		g2.addEdge(2, 4);
+		g2.addEdge(3, 4);
+		
+		for(long i = 1; i <= 4; ++i) {
+			for(long j = 6; j <= 8; ++j) {
+				g1.addEdge(i, j);
+				g2.addEdge(i, j);
+			}
+		}
+		
+		for(long i  = 8; i < 13; ++i) {
+			for(long j = i + 1; j <= 13; ++j) {
+				g1.addEdge(i, j);
+			}
+		}
+		*/
+
+		float p = 0.1f;
+		int sizeOfNonSetNodes = 500;
+		int sizeOfSetNodes = 50;
+		int sizeTotal = sizeOfNonSetNodes + sizeOfSetNodes;
+		int nodeNum = (int)(1 / p);
+		Random rand = new Random(System.currentTimeMillis());
+		
+		for(long i = 0; i < sizeOfNonSetNodes - 1; ++i) {
+			for(long j = i + 1; j < sizeOfNonSetNodes; ++j) {
+				if(rand.nextInt() % nodeNum == 0) {
+					g1.addEdge(i, j);
+					g2.addEdge(i, j);
+				}
+			}
+		}
+		
+		for(long i = sizeOfNonSetNodes; i < sizeTotal; ++i) {
+			set.add(i);
+			for(long j = i + 1; j < sizeTotal; ++j) {
+				g1.addEdge(i, j);
+			}
+		}
+		
+		for(long i = 0; i < sizeOfNonSetNodes; ++i) {
+			for(long j = sizeOfNonSetNodes; j < sizeTotal; ++j) {
+				if(rand.nextInt() % nodeNum == 0) {
+					g1.addEdge(i, j);
+					g2.addEdge(i, j);
+				}
+			}
+		} 
+		
+		/*
 		BufferedReader reader = new BufferedReader(new FileReader(new File("res")));
 		
 		String line = "";
@@ -77,26 +147,32 @@ public class Test{
 		}
 		
 		reader.close();
+		*/
 		
+
 		g1.setLocalCliqueSet(new TLongHashSet());
 		g2.setLocalCliqueSet(set);
 		
 		long start = System.currentTimeMillis();
-		long[] res1 = g1.enumClique(4, 0, false);
+		long[] res1 = g1.enumClique(5, 0, false);
 		long end = System.currentTimeMillis();
 		
 		System.out.println("Method 1, Elapsed time : " +(end - start));
 		
 		start = System.currentTimeMillis();
-		long[] res2 = g2.enumClique(4, 0, false);
+		long[] res2 = g2.enumClique(5, 0, false);
 		end = System.currentTimeMillis();
 		
 		System.out.println("Method 2, Elapsed time : " +(end - start));
 		
-		long[] test = { 1, 2, 3, 4 };
-		findSubsets(test);
+		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res1));
+		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res2));
+		
+		//System.out.println(HyperVertex.HVArrayToString(res1));
+		//System.out.println(HyperVertex.HVArrayToString(res2));
 		
 		/*
+
 		int i = 2;
 		int size = (int)res2[2];
 		

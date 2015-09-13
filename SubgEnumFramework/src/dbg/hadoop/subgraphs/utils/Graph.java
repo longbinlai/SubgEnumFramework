@@ -29,6 +29,8 @@ public class Graph{
 	private long orientedSize=0;
 	//private TLongLongHashMap cliqueMap = null;
 	private TLongHashSet cliqueSet = null;
+	private long countRunning = 0L;
+	private CliqueEncoder encoder = null;
 
 	//HashMap<String, HashSet<String>> graph = new HashMap<String, HashSet<String>>();  
 	//HashMap<String, Integer> degrees =new HashMap<String, Integer>();
@@ -130,9 +132,21 @@ public class Graph{
 		}
 		return true;
 	}
+	
+	private boolean checkPreviousAreAvailable(TLongArrayList nodes, 
+			int [] indexes, int upTo, BitSet bitset) {
+		if(!bitset.get(indexes[upTo])) {
+			return false;
+		}
+		for (int i = 0; i< upTo; ++i) {
+			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) 
+				return false;
+		}
+		return true;
+	}
 
-	private void addCommonCliqueNeighbors(long curVertex, TLongHashSet commonNeighbors) {
-		TLongArrayList curNeighbors = this.getAdjList(curVertex);
+	private void addCommonCliqueNeighbors(long curVertex, TLongArrayList commonNeighbors) {
+		TLongArrayList curNeighbors = this.getSortedAdjList(curVertex);
 		TLongIterator iter = curNeighbors.iterator();
 		while(iter.hasNext()) {
 			long v = iter.next();
@@ -171,7 +185,7 @@ public class Graph{
 		TLongArrayList l = this.getNodeList();
 		TLongArrayList neighbors; 
 
-		long countRunning=0;
+		countRunning=0;
 		TLongIterator it = l.iterator();		
 
 		int [] indexes = new int[cliqueSize-1];
@@ -223,7 +237,7 @@ public class Graph{
 	   */
 	@Deprecated
 	public long[] enumCliqueOfSize(int cliqueSize, long curV) {
-		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize);
+		encoder = new CliqueEncoder(curV, cliqueSize);
 		TLongArrayList l = this.getNodeList();
 		TLongArrayList neighbors = null;
 
@@ -231,7 +245,7 @@ public class Graph{
 		int[] indexes = new int[cliqueSize - 1];
 		long[] curClique = new long[cliqueSize];
 		long a = 0L;
-		long countRunning = 0L;
+		countRunning = 0L;
 
 		while (it.hasNext()) {
 			a = it.next();
@@ -252,7 +266,7 @@ public class Graph{
 							}
 						}
 						if (!failure) {
-							if (fixing + 1 < indexes.length) {
+							if (fixing + 1 < indexes.length) {							
 								fixing += 1;
 								indexes[fixing] = indexes[fixing - 1] + 1;
 							} else {
@@ -284,10 +298,12 @@ public class Graph{
 		return encoder.getEncodedCliques();
 	}
 
-		/**
-	 * New API.
-	 * Using the cliqueMap to save useless enumeration
-	 * @param cliqueSize
+	
+	/**
+	 * New API. 
+	 * Using the cliqueMap to save useless enumeration.
+	 * Using the bitset to replace the hash map
+     * @param cliqueSize
 	 * @param curV
 	 * @return
 	 */
@@ -304,163 +320,83 @@ public class Graph{
 			}
 		}
 		
-		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
+		if(countOnly) {
+			encoder = null;
+		}
+		else {
+			encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
+		}
 		TLongArrayList l = this.getNonCliqueNodeList();
 
-		TLongIterator it = null;
+		TLongIterator it = null, it2 = null;
 		TLongArrayList neighbors = new TLongArrayList();
-		TLongHashSet commonNeighbors = new TLongHashSet();
-		TLongHashSet curCommonNeighbors = new TLongHashSet();
+		TLongArrayList commonNeighbors = new TLongArrayList();
+		TLongArrayList curCommonNeighbors = new TLongArrayList();
 
-		long countRunning = 0L;
-		TLongHashSet validSetCur = new TLongHashSet();
-		
-		int k = 2;
+		countRunning = 0L;
 		it = l.iterator();
 		
 		long a = 0L;
 			
 		while (it.hasNext()) {
-			k = 2;
 			a = it.next();
-			//validSetPrev.clear();
-			neighbors.clear();
-			validSetCur.clear();
+			neighbors = this.getNonCliqueLargerNeighbors(a, null);
 			commonNeighbors.clear();
 			this.addCommonCliqueNeighbors(a, commonNeighbors);
-
-			while(k <= cliqueSize) {
-				int[] indexes = new int[k - 1];
-				long[] curClique = new long[k];
-				
-				curClique[0] = a;
-		        if(validSetCur.size() != 0) {
-			        neighbors.clear();
-			        neighbors.addAll(validSetCur);
-			        neighbors.sort();
-			        validSetCur.clear();
-		        }
-				if( k == 2 ) {
-					if(commonNeighbors.size() >= cliqueSize - 1) {
-						long[] single = { a };
-						if(!countOnly) {
-							encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
-						}
-						countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
-					}
-
-				    neighbors = this.getNonCliqueLargerNeighbors(a, null);
-					if(commonNeighbors.size() >= cliqueSize - 2) {
-						for(long neigh : neighbors.toArray()) {
-							curClique[1] = neigh;
-							if(cliqueSize != 2) {
-								curCommonNeighbors.clear();
-								curCommonNeighbors.addAll(commonNeighbors);
-								for (long cliqueVertex : commonNeighbors.toArray()) {
-									if (!this.hasNeighbor(cliqueVertex, curClique[1])) {
-										curCommonNeighbors.remove(cliqueVertex);
-									}
-								}
-								if(curCommonNeighbors.size() >= cliqueSize - 2) {
-									if(!countOnly) {
-										encoder.addNormalVerticesWithCompress(curClique, 2, 
-											curCommonNeighbors.toArray());
-									}
-									countRunning += CliqueEncoder.binorm(
-										curCommonNeighbors.size(), cliqueSize - 2);
-								}
-							}
-							else {
-								countRunning += 1;
-								if(!countOnly)
-									encoder.addNormalVerticesWithCompress(curClique, 2, null);
-							}
-						}
-					}
-				} 
-				else {
-					if(commonNeighbors.size() < cliqueSize - k){
-						k += 1;
-						continue;
-					}
-					//neighbors = new TLongArrayList(validSetPrev.toArray());
-					//neighbors.sort();
-					if (neighbors.size() >= k - 1) {
-						indexes[0] = 0;
-						int fixing = 0;
-						boolean failure = false;
-						while (fixing >= 0) {
-							while (!failure) {
-								while(!failure && !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
-									indexes[fixing] += 1;
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-								if (!failure) {
-									if (fixing + 1 < indexes.length) {
-										fixing += 1;
-										indexes[fixing] = indexes[fixing - 1] + 1;
-									} else {
-										curCommonNeighbors.clear();
-										curCommonNeighbors.addAll(commonNeighbors);
-										// These vertices can form a k-clique, so they are the candidates
-										// for forming (k + 1) - clique
-										if(k != cliqueSize) {
-											for (int i = 1; i < k; ++i) {
-												validSetCur.add(neighbors.get(indexes[i - 1]));
-											}
-										}
-										
-										for (int i = 1; i < k; ++i) {
-											curClique[i] = neighbors.get(indexes[i - 1]);								
-											if (k != cliqueSize) {
-												for (long cliqueVertex : curCommonNeighbors.toArray()) {
-													if (!this.hasNeighbor(cliqueVertex, curClique[i])) {
-														curCommonNeighbors.remove(cliqueVertex);
-													}
-												}
-												if(curCommonNeighbors.size() < cliqueSize - k) {
-													break;
-												}
-											}
-										}
-										if(k == cliqueSize) {
-											countRunning += 1;
-											if(!countOnly) {
-												encoder.addNormalVerticesWithCompress(curClique, k, null);
-											}
-										}
-										else {
-											if(curCommonNeighbors.size() >= cliqueSize - k) {
-												countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
-													cliqueSize - k);
-												if(!countOnly){
-													encoder.addNormalVerticesWithCompress(curClique, k, 
-															curCommonNeighbors.toArray());
-												}
-											}
-										}
-										indexes[fixing] += 1;
-									}
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-							}
-							fixing -= 1;
-							if (fixing >= 0) {
-								indexes[fixing] += 1;
-								failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
-									- fixing - 1))));
-							}
-						}
-					}
+			
+			if(commonNeighbors.size() >= cliqueSize - 1) {
+				long[] single = { a };
+				countRunning += CliqueEncoder.binorm(commonNeighbors.size(), 
+						cliqueSize - 1);
+				if(!countOnly){
+					encoder.addNormalVerticesWithCompress(single, 1, 
+							commonNeighbors.toArray());
 				}
-				k += 1;
+				//System.out.println(HyperVertex.HVArrayToString(single) + ", " +
+				//		HyperVertex.HVArrayToString(commonNeighbors.toArray()));
 			}
+			long[] curClique = new long[2];
+			curClique[0] = a;
+			it2 = neighbors.iterator();
+			int index = 0;
+			while(it2.hasNext()) {
+				long neigh = it2.next();
+				curClique[1] = neigh;
+				if(cliqueSize != 2) {
+					curCommonNeighbors.clear();
+					for (long cliqueVertex : commonNeighbors.toArray()) {
+						if (this.hasNeighbor(cliqueVertex, curClique[1])) {
+							curCommonNeighbors.add(cliqueVertex);
+						}
+					}
+					if(curCommonNeighbors.size() >= cliqueSize - 2) {
+						if(!countOnly) {
+							encoder.addNormalVerticesWithCompress(curClique, 2, 
+								curCommonNeighbors.toArray());
+						}
+						countRunning += CliqueEncoder.binorm(
+							curCommonNeighbors.size(), cliqueSize - 2);
+						//System.out.println(HyperVertex.HVArrayToString(curClique) + ", " +
+						//		HyperVertex.HVArrayToString(curCommonNeighbors.toArray()));
+					}
+					//if (curCommonNeighbors.size() >= cliqueSize - 3) {
+					if (countOnly) {
+						this.enumCliqueRecursive(curClique, index,
+								neighbors, curCommonNeighbors, cliqueSize);
+					} else {
+						this.enumCliqueRecursive(curClique, index,
+									neighbors, curCommonNeighbors, cliqueSize);
+					}
+					//}
+				}
+				else {
+					countRunning += 1;
+					if(!countOnly)
+						encoder.addNormalVerticesWithCompress(curClique, 2, null);
+				}
+				index += 1;
+			}
+
 		}
 			
 		if(cliqueSet.size() >= cliqueSize) {
@@ -477,203 +413,61 @@ public class Graph{
 		}
 		return res;
 	}
-
-	/**
-	 * New API. 
-	 * Using the cliqueMap to save useless enumeration.
-	 * Using the bitset to replace the hash map
-     * @param cliqueSize
-	 * @param curV
-	 * @return
-	 */
-	public long[] enumCliqueNew(int cliqueSize, long curV, boolean countOnly) {
-		assert(this.cliqueSet != null);
-		if(cliqueSet.size() == 0) {
-			if(countOnly) {
-				long[] res = new long[1];
-				res[0] = this.countCliquesOfSize(cliqueSize);
-				return res;
-			}
-			else {
-				return this.enumCliqueOfSize(cliqueSize, curV);
-			}
+	
+	private boolean checkFormClique(long[] curClique, long newNode) {
+		for(long node : curClique) {
+			if(!this.hasNeighbor(node, newNode)) return false;
 		}
-		
-		CliqueEncoder encoder = new CliqueEncoder(curV, cliqueSize, cliqueSet.size());
-		TLongArrayList l = this.getNonCliqueNodeList();
-
-		TLongIterator it = null;
-		TLongArrayList neighbors = new TLongArrayList();
-		BitSet validNodeSetPrev = null;
-		BitSet validNodeSetCur = null;
-		TLongHashSet commonNeighbors = new TLongHashSet();
-		TLongHashSet curCommonNeighbors = new TLongHashSet();
-
-		long countRunning = 0L;
-		//TLongHashSet validSetCur = new TLongHashSet();
-		
-		int k = 2;
-		it = l.iterator();
-		
-		long a = 0L;
-			
-		while (it.hasNext()) {
-			k = 2;
-			a = it.next();
-			//validSetPrev.clear();
-	    	neighbors = this.getNonCliqueLargerNeighbors(a, null);
-	    	validNodeSetPrev = new BitSet(neighbors.size());
-	    	validNodeSetCur = new BitSet(neighbors.size());
-	    	// Initilize all bit to be true
-	    	validNodeSetPrev.set(0, neighbors.size());
-
-			commonNeighbors.clear();
-			this.addCommonCliqueNeighbors(a, commonNeighbors);
-
-			while(k <= cliqueSize) {
-				int[] indexes = new int[k - 1];
-				long[] curClique = new long[k];
-				curClique[0] = a;
-				if( k == 2 ) {
-					if(commonNeighbors.size() >= cliqueSize - 1) {
-						long[] single = { a };
-						if(!countOnly) {
-							encoder.addNormalVerticesWithCompress(single, 1, commonNeighbors.toArray());
-						}
-						countRunning += CliqueEncoder.binorm(commonNeighbors.size(), cliqueSize - 1);
-					}
-
-					if(commonNeighbors.size() >= cliqueSize - 2) {
-						for(long neigh : neighbors.toArray()) {
-							curClique[1] = neigh;
-							if(cliqueSize != 2) {
-								curCommonNeighbors.clear();
-								curCommonNeighbors.addAll(commonNeighbors);
-								for (long cliqueVertex : commonNeighbors.toArray()) {
-									if (!this.hasNeighbor(cliqueVertex, curClique[1])) {
-										curCommonNeighbors.remove(cliqueVertex);
-									}
-								}
-								if(curCommonNeighbors.size() >= cliqueSize - 2) {
-									if(!countOnly) {
-										encoder.addNormalVerticesWithCompress(curClique, 2, 
-											curCommonNeighbors.toArray());
-									}
-									countRunning += CliqueEncoder.binorm(
-										curCommonNeighbors.size(), cliqueSize - 2);
-								}
-							}
-							else {
-								countRunning += 1;
-								if(!countOnly)
-									encoder.addNormalVerticesWithCompress(curClique, 2, null);
-							}
-						}
-					}
-				} 
+		return true;
+	}
+	
+	/**
+	 * 
+	 * @param curClique
+	 * @param indexOfLast
+	 * @param neighbors
+	 * @param commonCliqueNeighbors
+	 * @param countOnly
+	 */
+	public void enumCliqueRecursive(long[] curClique, int indexOfLast, TLongArrayList neighbors, 
+			TLongArrayList commonCliqueNeighbors, int cliqueSize) {
+		int curCliqueSize = curClique.length;
+		//TLongIterator iter = commonCliqueNeighbors.iterator();
+		long[] cliqueNodes = commonCliqueNeighbors.toArray();
+		TLongArrayList curCommonCliqueNeighbors = new TLongArrayList();
+		for(int i = indexOfLast + 1; i < neighbors.size(); ++i) {
+			long newNode = neighbors.get(i);
+			curCommonCliqueNeighbors.clear();
+			if(this.checkFormClique(curClique, newNode)) {
+				long[] newClique = new long[curCliqueSize + 1];
+				for(int j = 0; j < curCliqueSize; ++j) {
+					newClique[j] = curClique[j];
+				}
+				newClique[curCliqueSize] = newNode;
+				
+				if(curCliqueSize + 1 == cliqueSize) {
+					countRunning += 1;
+					if(encoder != null)
+						encoder.addNormalVerticesWithCompress(newClique, cliqueSize, null);
+				}
 				else {
-					if(commonNeighbors.size() < cliqueSize - k){
-						k += 1;
-						continue;
-					}
-					if(k > 3) {
-					    validNodeSetPrev.and(validNodeSetCur);
-					    validNodeSetCur.clear();
-				    }
-					//neighbors = new TLongArrayList(validSetPrev.toArray());
-					//neighbors.sort();
-					if (validNodeSetPrev.cardinality() >= k - 1) {
-						indexes[0] = 0;
-						int fixing = 0;
-						boolean failure = false;
-						while (fixing >= 0){
-							while (!failure) {
-								while(!failure && !validNodeSetPrev.get(indexes[fixing]) 
-										&& !this.checkPreviousAreAdjacent(neighbors, indexes, fixing)) {
-									indexes[fixing] += 1;
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-								if (!failure) {
-									if (fixing + 1 < indexes.length) {
-										fixing += 1;
-										indexes[fixing] = indexes[fixing - 1] + 1;
-									} else {
-										curCommonNeighbors.clear();
-										curCommonNeighbors.addAll(commonNeighbors);
-										// These vertices can form a k-clique, so they are the candidates
-										// for forming (k + 1) - clique
-										if(k != cliqueSize) {
-											for (int i = 1; i < k; ++i) {
-												validNodeSetCur.set(indexes[i-1]);
-											}
-										}
-										
-										for (int i = 1; i < k; ++i) {
-											curClique[i] = neighbors.get(indexes[i - 1]);								
-											if (k != cliqueSize) {
-												for (long cliqueVertex : curCommonNeighbors.toArray()) {
-													if (!this.hasNeighbor(cliqueVertex, curClique[i])) {
-														curCommonNeighbors.remove(cliqueVertex);
-													}
-												}
-												if(curCommonNeighbors.size() < cliqueSize - k) {
-													break;
-												}
-											}
-										}
-										if(k == cliqueSize) {
-											countRunning += 1;
-											if(!countOnly) {
-												encoder.addNormalVerticesWithCompress(curClique, k, null);
-											}
-										}
-										else {
-											if(curCommonNeighbors.size() >= cliqueSize - k) {
-												countRunning += CliqueEncoder.binorm(curCommonNeighbors.size(), 
-													cliqueSize - k);
-												if(!countOnly){
-													encoder.addNormalVerticesWithCompress(curClique, k, 
-															curCommonNeighbors.toArray());
-												}
-											}
-										}
-										indexes[fixing] += 1;
-									}
-									if (!(indexes[fixing] < (neighbors.size() - (indexes.length
-										- fixing - 1)))) {
-										failure = true;
-									}
-								}
-							}
-							fixing -= 1;
-							if (fixing >= 0) {
-								indexes[fixing] += 1;
-								failure = (!(indexes[fixing] < (neighbors.size() - (indexes.length
-									- fixing - 1))));
-							}
+					for(long cliqueNode: cliqueNodes) {
+						if (this.hasNeighbor(cliqueNode, newNode)) {
+							curCommonCliqueNeighbors.add(cliqueNode);
 						}
+					}
+					countRunning += CliqueEncoder.binorm(curCommonCliqueNeighbors.size(), 
+								cliqueSize - (curCliqueSize + 1));
+					if(encoder != null)
+						encoder.addNormalVerticesWithCompress(newClique, curCliqueSize + 1, 
+							curCommonCliqueNeighbors.toArray());
+					if ((i + 1) < neighbors.size()) {
+						this.enumCliqueRecursive(newClique, i, neighbors, 
+								curCommonCliqueNeighbors, cliqueSize);
 					}
 				}
-				k += 1;
 			}
 		}
-			
-		if(cliqueSet.size() >= cliqueSize) {
-			countRunning += CliqueEncoder.binorm(cliqueSet.size(), cliqueSize);
-			if(!countOnly)
-				encoder.addCliqueVertex(cliqueSet.toArray());
-		}
-		long[] res = null;
-		if(!countOnly)
-			res = encoder.getEncodedCliques();
-		else {
-			res = new long[1];
-			res[0] = countRunning;
-		}
-		return res;
 	}
 	
 
