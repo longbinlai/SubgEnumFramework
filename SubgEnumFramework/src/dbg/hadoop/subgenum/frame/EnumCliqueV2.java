@@ -152,7 +152,7 @@ class EnumCliqueV2EnumReducer extends
 			}
 			localCliqueSet.clear();
 		}*/
-		g.setLocalCliqueSet(localCliqueSet);
+		//g.setLocalCliqueSet(localCliqueSet);
 		
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));

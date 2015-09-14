@@ -95,7 +95,6 @@ class EnumCliqueV1DebugReducer extends
 			Context context) throws IOException, InterruptedException {
 		Graph G = new Graph();
 		int cnt = 0;
-		boolean noAddEdge = false;
 		for (HVArray val : values) {
 			cnt = cnt + 1;
 			for (int i = 0; i < val.size(); i = i + 2) {
@@ -146,7 +145,7 @@ class EnumCliqueV2DebugReducer extends
 				g.addSetNodes(v2);
 			}
 		}
-		g.setLocalCliqueSet(localCliqueSet);
+		//g.setLocalCliqueSet(localCliqueSet);
 		
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
