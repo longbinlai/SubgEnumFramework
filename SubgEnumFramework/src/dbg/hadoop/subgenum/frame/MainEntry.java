@@ -66,10 +66,13 @@ public class MainEntry{
 			log.info("Start enumerating " + inputInfo.cliqueNumVertices + "-clique...");
 			startTime = System.currentTimeMillis();
 			
-			if(inputInfo.isResultCompression)
+			if(inputInfo.isResultCompression) {
+				log.info("Enumerating clique V2 ...");
 				EnumCliqueV2.run(inputInfo);
-			else
+			}
+			else {
 				EnumClique.run(inputInfo);
+			}
 			
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-" + inputInfo.cliqueNumVertices + "clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");

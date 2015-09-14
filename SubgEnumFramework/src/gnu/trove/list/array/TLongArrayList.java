@@ -807,7 +807,6 @@ public class TLongArrayList implements TLongList, Externalizable {
         Arrays.sort( _data, 0, _pos );
     }
 
-
     /** {@inheritDoc} */
     public void sort( int fromIndex, int toIndex ) {
         Arrays.sort( _data, fromIndex, toIndex );

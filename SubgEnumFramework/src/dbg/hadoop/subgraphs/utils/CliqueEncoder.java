@@ -66,7 +66,7 @@ public class CliqueEncoder{
 	  normalBuffer.add(k);
 	  normalBuffer.addAll(vertices);
 	  if(commonCliqueNeighbors != null) {
-		  //Arrays.sort(commonCliqueNeighbors);
+		  Arrays.sort(commonCliqueNeighbors);
 		  normalBuffer.addAll(commonCliqueNeighbors);
 	  }
   }

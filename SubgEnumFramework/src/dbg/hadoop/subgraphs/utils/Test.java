@@ -8,7 +8,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.management.MemoryUsage;
 import java.security.SecureRandom;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,131 +44,83 @@ public class Test{
 	
 	public static void main(String[] args) 
 			throws InstantiationException, IllegalAccessException, IOException{
-
-		TLongHashSet set = new TLongHashSet();
+		float p = 0.1f;
+		//int[] nonSetNodeSizes = { 100, 300, 500, 1000, 2000, 3000, 4000, 5000 };
+		//int[] setNodeSizes = { 20, 50, 80, 100, 200, 300, 400, 500 };
+		//int[] cliqueSizes = { 3, 4, 5 };
+		int[] nonSetNodeSizes = { 2000 };
+		int[] setNodeSizes = { 50 };
+		int[] cliqueSizes = { 4 };
+		
 		Graph g1 = new Graph();
 		Graph g2 = new Graph();
-	
-		/*
-		set.add(8);
-		set.add(9);
-		set.add(10);
-		set.add(11);
-		set.add(12);
-		set.add(13);
+		TLongHashSet set = new TLongHashSet();
+		
+		System.out.println("k\t#NonSetNodes\t#SetNodes\tPerformance Gain");
+		for (int k : cliqueSizes) {
+			for (int sizeOfNonSetNodes : nonSetNodeSizes) {
+				for (int sizeOfSetNodes : setNodeSizes) {
+					g1.clear();
+					g2.clear();
+					set.clear();
+					
+					int sizeTotal = sizeOfNonSetNodes + sizeOfSetNodes;
+					int nodeNum = (int) (1 / p);
+					Random rand = new Random(System.currentTimeMillis());
 
-		g1.addEdge(1, 2);
-		g1.addEdge(1, 3);
-		g1.addEdge(1, 4);
-		g1.addEdge(2, 3);
-		g1.addEdge(2, 4);
-		g1.addEdge(3, 4);
-		
-		g2.addEdge(1, 2);
-		g2.addEdge(1, 3);
-		g2.addEdge(1, 4);
-		g2.addEdge(2, 3);
-		g2.addEdge(2, 4);
-		g2.addEdge(3, 4);
-		
-		for(long i = 1; i <= 4; ++i) {
-			for(long j = 6; j <= 8; ++j) {
-				g1.addEdge(i, j);
-				g2.addEdge(i, j);
-			}
-		}
-		
-		for(long i  = 8; i < 13; ++i) {
-			for(long j = i + 1; j <= 13; ++j) {
-				g1.addEdge(i, j);
-			}
-		}
-		*/
+					for (long i = 0; i < sizeOfNonSetNodes - 1; ++i) {
+						for (long j = i + 1; j < sizeOfNonSetNodes; ++j) {
+							if (rand.nextInt() % nodeNum == 0) {
+								g1.addEdge(i, j);
+								g2.addEdge(i, j);
+							}
+						}
+					}
 
-		float p = 0.1f;
-		int sizeOfNonSetNodes = 500;
-		int sizeOfSetNodes = 50;
-		int sizeTotal = sizeOfNonSetNodes + sizeOfSetNodes;
-		int nodeNum = (int)(1 / p);
-		Random rand = new Random(System.currentTimeMillis());
-		
-		for(long i = 0; i < sizeOfNonSetNodes - 1; ++i) {
-			for(long j = i + 1; j < sizeOfNonSetNodes; ++j) {
-				if(rand.nextInt() % nodeNum == 0) {
-					g1.addEdge(i, j);
-					g2.addEdge(i, j);
+					for (long i = sizeOfNonSetNodes; i < sizeTotal; ++i) {
+						g2.addSetNodes(i);
+						for (long j = i + 1; j < sizeTotal; ++j) {
+							g1.addEdge(i, j);
+						}
+					}
+
+					for (long i = 0; i < sizeOfNonSetNodes; ++i) {
+						for (long j = sizeOfNonSetNodes; j < sizeTotal; ++j) {
+							if (rand.nextInt() % nodeNum == 0) {
+								g1.addEdge(i, j);
+								g2.addEdge(i, j);
+							}
+						}
+					}
+
+					long start = System.currentTimeMillis();
+					long[] res1 = g1.enumClique(k, 0, true);
+					long end = System.currentTimeMillis();
+					
+					long time1 = end - start;
+					start = System.currentTimeMillis();
+					long[] res2 = g2.enumClique(k, 0, true);
+					end = System.currentTimeMillis();
+					
+					long time2 = end - start;
+					
+					float performGain = time1 / (float)time2;
+					
+					System.out.println("Method 1: " + time1);
+					System.out.println("Method 2: " + time2);
+					
+					if(res1[0] != res2[0]) {
+						System.err.println("Result 1: " + res1[0] + " is not equal to result 2: " + res2[0]);
+					}
+					
+					System.out.println(k + "\t" + sizeOfNonSetNodes + "\t"
+							+ sizeOfSetNodes + "\t" + performGain);
 				}
 			}
 		}
 		
-		for(long i = sizeOfNonSetNodes; i < sizeTotal; ++i) {
-			set.add(i);
-			for(long j = i + 1; j < sizeTotal; ++j) {
-				g1.addEdge(i, j);
-			}
-		}
-		
-		for(long i = 0; i < sizeOfNonSetNodes; ++i) {
-			for(long j = sizeOfNonSetNodes; j < sizeTotal; ++j) {
-				if(rand.nextInt() % nodeNum == 0) {
-					g1.addEdge(i, j);
-					g2.addEdge(i, j);
-				}
-			}
-		} 
-		
-		/*
-		BufferedReader reader = new BufferedReader(new FileReader(new File("res")));
-		
-		String line = "";
-		boolean addEdge = true;
-		while((line = reader.readLine()) != null){
-			if(line.startsWith("Edge")){
-				addEdge = true;
-			}
-			else {
-				addEdge = false;
-			}
-			line = line.substring(line.indexOf('['));
-			System.out.println(line);
-			String[] vertices = line.split("\\],\\[");
-			assert(vertices.length == 2);
-			String[] v0Info = vertices[0].substring(1, vertices[0].length()).split(",");
-			String[] v1Info = vertices[1].substring(0, vertices[1].length() - 1).split(",");
-			long v0 = HyperVertex.get(Integer.valueOf(v0Info[0]), Integer.valueOf(v0Info[1]));
-			long v1 = HyperVertex.get(Integer.valueOf(v1Info[0]), Integer.valueOf(v1Info[1]));
-			if(addEdge){
-				g1.addEdge(v0, v1);
-				g2.addEdge(v0, v1);
-			}
-			else {
-				g1.addEdge(v0, v1);
-				set.add(v0);
-				set.add(v1);
-			}
-		}
-		
-		reader.close();
-		*/
-		
-
-		g1.setLocalCliqueSet(new TLongHashSet());
-		g2.setLocalCliqueSet(set);
-		
-		long start = System.currentTimeMillis();
-		long[] res1 = g1.enumClique(5, 0, false);
-		long end = System.currentTimeMillis();
-		
-		System.out.println("Method 1, Elapsed time : " +(end - start));
-		
-		start = System.currentTimeMillis();
-		long[] res2 = g2.enumClique(5, 0, false);
-		end = System.currentTimeMillis();
-		
-		System.out.println("Method 2, Elapsed time : " +(end - start));
-		
-		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res1));
-		System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res2));
+		//System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res1));
+		//System.out.println(CliqueEncoder.getNumCliquesFromEncodedArrayV2(res2));
 		
 		//System.out.println(HyperVertex.HVArrayToString(res1));
 		//System.out.println(HyperVertex.HVArrayToString(res2));

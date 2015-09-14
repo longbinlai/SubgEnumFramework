@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ public class Graph{
 	public Graph() {
 		graph = new HashMap<Long, TLongHashSet>();
 		degrees = new TLongIntHashMap();
+		cliqueSet = new TLongHashSet();
 	}
 
 	public class GraphNodeComparator implements Comparator<Long> {
@@ -64,7 +66,7 @@ public class Graph{
 				return cmp;
 			}
 			else{
-				return (HyperVertex.VertexID(a) < HyperVertex.VertexID(b) ? -1 : 1);
+				return (a < b ? -1 : 1);
 			}
 		}
 
@@ -72,6 +74,18 @@ public class Graph{
 	
 	public void setLocalCliqueSet(TLongHashSet set) {
 		this.cliqueSet = set;
+	}
+	
+	public void clearLocalCliqueSet() {
+		this.cliqueSet.clear();
+	}
+	
+	public void addSetNodes(long a) {
+		this.cliqueSet.add(a);
+	}
+	
+	public int getLocalCliqueSetSize() {
+		return this.cliqueSet.size();
 	}
 	
 	public int getNodesNumber() {
@@ -99,45 +113,27 @@ public class Graph{
 	}
 
 	public TLongArrayList getLargerNeighbors(long a) {
-
 		TLongArrayList filtered = new TLongArrayList();
-		TLongArrayList neigh = this.getAdjList(a);
-		neigh.sort();
-		long[] array = neigh.toArray();
-		int index = BinarySearch.findLargeIndex(a, array);
-		filtered.add(array, index, array.length - index);
-		return filtered; 
+		long[] neigh = this.getSortedAdjList(a).toArray();
+		int index = BinarySearch.findLargeIndex(a, neigh);
+		filtered.add(neigh, index, neigh.length - index);
+		filtered.sort();
+		return filtered;
 	}
 	
-	public TLongArrayList getNonCliqueLargerNeighbors(long a, TLongHashSet validSet) {
+	public TLongArrayList getNonCliqueLargerNeighbors(long a) {
 		TLongArrayList filtered = new TLongArrayList();
-		TLongArrayList neigh = this.getAdjList(a);
-		TLongIterator iter = neigh.iterator();
-		while(iter.hasNext()){
-			long v = iter.next();
-			if(v > a && !this.cliqueSet.contains(v)){
-				if(validSet == null || validSet.contains(v))
-					filtered.add(v);
-			}
+		long[] neigh = this.getSortedAdjList(a).toArray();
+		int index = BinarySearch.findLargeIndex(a, neigh);
+		for(int i = index; i < neigh.length; ++i){
+			if(!this.cliqueSet.contains(neigh[i]))
+				filtered.add(neigh[i]);
 		}
-		filtered.sort();
-		return filtered; 
+		return filtered;
 	}
 
 	private boolean checkPreviousAreAdjacent(TLongArrayList nodes, 
 			int [] indexes, int upTo) {
-		for (int i = 0; i< upTo; ++i) {
-			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) 
-				return false;
-		}
-		return true;
-	}
-	
-	private boolean checkPreviousAreAvailable(TLongArrayList nodes, 
-			int [] indexes, int upTo, BitSet bitset) {
-		if(!bitset.get(indexes[upTo])) {
-			return false;
-		}
 		for (int i = 0; i< upTo; ++i) {
 			if(!this.hasNeighbor(nodes.get(indexes[i]),  nodes.get(indexes[upTo]))) 
 				return false;
@@ -154,6 +150,13 @@ public class Graph{
 				commonNeighbors.add(v);
 			}
 		}
+	}
+	
+	private boolean checkFormClique(long[] curClique, long newNode) {
+		for(long node : curClique) {
+			if(!this.hasNeighbor(node, newNode)) return false;
+		}
+		return true;
 	}
 	
 	public long countTriangles () {
@@ -190,6 +193,7 @@ public class Graph{
 
 		int [] indexes = new int[cliqueSize-1];
 		long a;
+		long start = 0, end = 0, total = 0;
 		while(it.hasNext()){
 			a=it.next();
 			neighbors = this.getLargerNeighbors(a);
@@ -246,6 +250,10 @@ public class Graph{
 		long[] curClique = new long[cliqueSize];
 		long a = 0L;
 		countRunning = 0L;
+		
+		long start = 0;
+		long end = 0;
+		long total = 0;
 
 		while (it.hasNext()) {
 			a = it.next();
@@ -277,6 +285,7 @@ public class Graph{
 								for (int i = 1; i < cliqueSize; ++i) {
 									curClique[i] = neighbors.get(indexes[i - 1]);
 								}
+								
 								encoder.addNormalVertices(curClique);
 								indexes[fixing] += 1;
 							}
@@ -337,10 +346,12 @@ public class Graph{
 		it = l.iterator();
 		
 		long a = 0L;
+		long start = 0, end = 0, total = 0;
 			
 		while (it.hasNext()) {
 			a = it.next();
-			neighbors = this.getNonCliqueLargerNeighbors(a, null);
+			neighbors = this.getNonCliqueLargerNeighbors(a);
+
 			commonNeighbors.clear();
 			this.addCommonCliqueNeighbors(a, commonNeighbors);
 			
@@ -376,18 +387,12 @@ public class Graph{
 						}
 						countRunning += CliqueEncoder.binorm(
 							curCommonNeighbors.size(), cliqueSize - 2);
-						//System.out.println(HyperVertex.HVArrayToString(curClique) + ", " +
-						//		HyperVertex.HVArrayToString(curCommonNeighbors.toArray()));
 					}
-					//if (curCommonNeighbors.size() >= cliqueSize - 3) {
-					if (countOnly) {
+					if (cliqueSize - 2 <= neighbors.size() - index || 
+							cliqueSize - 3 <= curCommonNeighbors.size()) {
 						this.enumCliqueRecursive(curClique, index,
 								neighbors, curCommonNeighbors, cliqueSize);
-					} else {
-						this.enumCliqueRecursive(curClique, index,
-									neighbors, curCommonNeighbors, cliqueSize);
 					}
-					//}
 				}
 				else {
 					countRunning += 1;
@@ -414,12 +419,6 @@ public class Graph{
 		return res;
 	}
 	
-	private boolean checkFormClique(long[] curClique, long newNode) {
-		for(long node : curClique) {
-			if(!this.hasNeighbor(node, newNode)) return false;
-		}
-		return true;
-	}
 	
 	/**
 	 * 
@@ -432,12 +431,28 @@ public class Graph{
 	public void enumCliqueRecursive(long[] curClique, int indexOfLast, TLongArrayList neighbors, 
 			TLongArrayList commonCliqueNeighbors, int cliqueSize) {
 		int curCliqueSize = curClique.length;
-		//TLongIterator iter = commonCliqueNeighbors.iterator();
 		long[] cliqueNodes = commonCliqueNeighbors.toArray();
-		TLongArrayList curCommonCliqueNeighbors = new TLongArrayList();
+		TLongHashSet curCommonCliqueNeighbors = null;
+		TLongArrayList removeNodes = null;
+
+		
+		if(curCliqueSize + 1 < cliqueSize) {
+			curCommonCliqueNeighbors = new TLongHashSet(cliqueNodes);
+			removeNodes = new TLongArrayList();
+			
+			if (curCliqueSize > 2) {
+				for (long cliqueNode : cliqueNodes) {
+					for (int i = 2; i < curClique.length; ++i) {
+						if (!this.hasNeighbor(cliqueNode, curClique[i])) {
+							curCommonCliqueNeighbors.remove(cliqueNode);
+						}
+					}
+				}
+			}
+		}
+		
 		for(int i = indexOfLast + 1; i < neighbors.size(); ++i) {
 			long newNode = neighbors.get(i);
-			curCommonCliqueNeighbors.clear();
 			if(this.checkFormClique(curClique, newNode)) {
 				long[] newClique = new long[curCliqueSize + 1];
 				for(int j = 0; j < curCliqueSize; ++j) {
@@ -451,9 +466,12 @@ public class Graph{
 						encoder.addNormalVerticesWithCompress(newClique, cliqueSize, null);
 				}
 				else {
-					for(long cliqueNode: cliqueNodes) {
-						if (this.hasNeighbor(cliqueNode, newNode)) {
-							curCommonCliqueNeighbors.add(cliqueNode);
+					removeNodes.clear();
+
+					for(long cliqueNode: curCommonCliqueNeighbors.toArray()) {
+						if (!this.hasNeighbor(cliqueNode, newNode)) {
+							curCommonCliqueNeighbors.remove(cliqueNode);
+							removeNodes.add(cliqueNode);
 						}
 					}
 					countRunning += CliqueEncoder.binorm(curCommonCliqueNeighbors.size(), 
@@ -461,10 +479,13 @@ public class Graph{
 					if(encoder != null)
 						encoder.addNormalVerticesWithCompress(newClique, curCliqueSize + 1, 
 							curCommonCliqueNeighbors.toArray());
-					if ((i + 1) < neighbors.size()) {
+
+					if (cliqueSize - curCliqueSize <= neighbors.size() - i || 
+							cliqueSize - curCliqueSize - 2 <= curCommonCliqueNeighbors.size()) {
 						this.enumCliqueRecursive(newClique, i, neighbors, 
-								curCommonCliqueNeighbors, cliqueSize);
+								commonCliqueNeighbors, cliqueSize);
 					}
+					curCommonCliqueNeighbors.addAll(removeNodes);
 				}
 			}
 		}
@@ -718,5 +739,22 @@ public class Graph{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void clear() {
+		if(this.cliqueSet != null)
+			this.cliqueSet.clear();
+		this.degrees.clear();
+		if(this.encoder != null)
+			this.encoder.clear();
+		this.encoder = null;
+		for(long key : this.graph.keySet()) {
+			this.graph.get(key).clear();
+		}
+		this.graph.clear();
+		
+		unorientedSize=0;
+		orientedSize=0;
+		countRunning = 0;
 	}
 }

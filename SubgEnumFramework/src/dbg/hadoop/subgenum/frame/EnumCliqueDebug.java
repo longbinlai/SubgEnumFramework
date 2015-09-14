@@ -19,9 +19,12 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -35,7 +38,11 @@ import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 import dbg.hadoop.subgraphs.utils.Utility;
 
 @SuppressWarnings("deprecation")
-public class EnumCliqueV2 {
+public class EnumCliqueDebug {
+	
+	public static void main(String[] args) throws IOException, Exception {
+		run(new InputInfo(args));
+	}
 
 	public static void run(InputInfo inputInfo) throws Exception {
 		//inputInfo = new InputInfo(args);
@@ -43,10 +50,7 @@ public class EnumCliqueV2 {
 		String workDir = inputInfo.workDir;
 		
 		Configuration conf = new Configuration();
-		conf.setBoolean("count.only", isCountOnly);
 		conf.setStrings("clique.number.vertices", inputInfo.cliqueNumVertices);
-		conf.setBoolean("result.compression", inputInfo.isResultCompression);
-		conf.setBoolean("count.only", isCountOnly);
 		
 		FileStatus[] files = Utility.getFS().listStatus(new Path(workDir + Config.cliques));
 		for(FileStatus f : files){
@@ -55,49 +59,63 @@ public class EnumCliqueV2 {
 		//DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
 		//			.toString() + "/" + Config.cliques), conf);
 		
-		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.res",	
+		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.v1.debug",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
 		
 
-		ToolRunner.run(conf, new GeneralDriver("Frame " + inputInfo.cliqueNumVertices + "-Clique", 
-			EnumCliqueV2Mapper.class, 
-			EnumCliqueV2EnumReducer.class, 
-			LongWritable.class, HVArray.class, //OutputKV
+		ToolRunner.run(conf, new GeneralDriver("Frame Debug " + inputInfo.cliqueNumVertices + "-Clique V1", 
+			EnumCliqueMapper.class, 
+			EnumCliqueV1DebugReducer.class, 
+			LongWritable.class, Text.class, //OutputKV
 			LongWritable.class, HVArray.class, //MapOutputKV
 			SequenceFileInputFormat.class, 
-			SequenceFileOutputFormat.class,
+			TextOutputFormat.class,
 			null), opts);
-
+		
+		opts[1] = workDir + "frame.clique.v2.debug";
+		
+		ToolRunner.run(conf, new GeneralDriver("Frame Debug " + inputInfo.cliqueNumVertices + "-Clique V2", 
+				EnumCliqueMapper.class, 
+				EnumCliqueV2DebugReducer.class, 
+				LongWritable.class, Text.class, //OutputKV
+				LongWritable.class, HVArray.class, //MapOutputKV
+				SequenceFileInputFormat.class, 
+				TextOutputFormat.class,
+				null), opts);
 	}
 	
-	public static void countOnce(InputInfo inputInfo) throws Exception {
-		if (inputInfo.isCountPatternOnce) {
-			String[] opts2 = { inputInfo.workDir + "frame.clique.res", inputInfo.workDir + "frame.clique.cnt", 
-					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices };
-			if (inputInfo.isCountOnly)
-				ToolRunner.run(new Configuration(),
-								new GeneralPatternCountDriver(
-										CliqueCountV2Mapper1.class), opts2);
-			else
-				ToolRunner.run(new Configuration(),
-								new GeneralPatternCountDriver(
-										CliqueCountV2Mapper2.class), opts2);
-		}
-	}
 }
 
-class EnumCliqueV2Mapper extends
-	Mapper<NullWritable, HVArray, LongWritable, HVArray> {
+class EnumCliqueV1DebugReducer extends
+		Reducer<LongWritable, HVArray, LongWritable, Text> {
+	// private static TLongLongHashMap cliqueMap = null;
+
 	@Override
-	public void map(NullWritable _key, HVArray _value, Context context)
-			throws IOException, InterruptedException {
-		context.write(new LongWritable(_value.getFirst()),
-				new HVArray(_value.getSecond(), _value.getLast()));
+	public void reduce(LongWritable _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		Graph G = new Graph();
+		int cnt = 0;
+		boolean noAddEdge = false;
+		for (HVArray val : values) {
+			cnt = cnt + 1;
+			for (int i = 0; i < val.size(); i = i + 2) {
+				long v1 = val.get(i), v2 = val.get(i + 1);
+				G.addEdge(v1, v2);
+			}
+		}
+		Configuration conf = context.getConfiguration();
+		int k = Integer.parseInt(conf.get("clique.number.vertices"));
+		long start = System.currentTimeMillis();
+		long res = G.countCliquesOfSize(k - 1);
+		long end = System.currentTimeMillis();
+		context.write(new LongWritable(HyperVertex.VertexID(_key.get())), 
+				new Text(G.getNodesNumber() + "\t" + G.getUnorientedSize() + "\t" + 0 + "\t" + 
+						(end - start) / 1000 + "\t" + res));
 	}
 }
 
-class EnumCliqueV2EnumReducer extends
-		Reducer<LongWritable, HVArray, LongWritable, HVArray> {
+class EnumCliqueV2DebugReducer extends
+		Reducer<LongWritable, HVArray, LongWritable, Text> {
 	private static TLongLongHashMap cliqueMap = null;
 	private static TLongHashSet localCliqueSet = null;
 	private static boolean isCountOnly = false;
@@ -122,52 +140,24 @@ class EnumCliqueV2EnumReducer extends
 						&& cliqueMap.get(_key.get()) == cliqueMap.get(v1);
 			}
 			if (!noAddEdge) {
-				//if(HyperVertex.VertexID(_key.get()) == 29974) {
-				//	System.out.println("Edge: " + HyperVertex.toString(v1) + "," 
-				//			+ HyperVertex.toString(v2));
-				//}
 				g.addEdge(v1, v2);
 			} else {
-				//if(HyperVertex.VertexID(_key.get()) == 29974) {
-				//	System.out.println("LocalSet: " + HyperVertex.toString(v1) + "," 
-				//			+ HyperVertex.toString(v2));
-				//}
-				//localCliqueSet.add(v1);
-				//localCliqueSet.add(v2);
 				g.addSetNodes(v1);
 				g.addSetNodes(v2);
 			}
 		}
-		//if(localCliqueSet.size() > 20) {
-		//	System.out.println(HyperVertex.toString(_key.get()) + " has set size: " + localCliqueSet.size());
-		//}
-		/*
-		if(localCliqueSet.size() <= 50){
-			//log.info("Add large local clique set with size : " + localCliqueSet.size());
-			long[] array = localCliqueSet.toArray();
-			for(int i = 0; i < array.length - 1; ++i){
-				for(int j = i + 1; j < array.length; ++j){
-					g.addEdge(array[i], array[j]);
-				}
-			}
-			localCliqueSet.clear();
-		}*/
 		g.setLocalCliqueSet(localCliqueSet);
 		
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
 		
 		long start = System.currentTimeMillis();
-		long[] cliqueEnc = g.enumClique(k - 1, _key.get(), isCountOnly);
+		long[] cliqueEnc = g.enumClique(k - 1, _key.get(), true);
 		long end = System.currentTimeMillis();
-		
-		if(end - start > 60000) {
-			log.info("Time Elapsed: " + (end - start) / 1000 + " s");
-			log.info("#Nodes = " + g.getNodesNumber() + "; #Edges = " + g.getUnorientedSize() + 
-					"; Set Size = " + localCliqueSet.size());
-		}
 	
-		context.write(_key, new HVArray(cliqueEnc));
+		context.write(new LongWritable(HyperVertex.VertexID(_key.get())), 
+				new Text(g.getNodesNumber() + "\t" + g.getUnorientedSize() + "\t" + g.getLocalCliqueSetSize() + "\t" + 
+						(end - start) / 1000 + "\t" + cliqueEnc[0]));
 	}
 	
 	@Override
@@ -219,27 +209,6 @@ class EnumCliqueV2EnumReducer extends
 	}
 }
 
-class CliqueCountV2Mapper1 extends
-		Mapper<LongWritable, HVArray, NullWritable, LongWritable> {
-	@Override
-	public void map(LongWritable _key, HVArray _value, Context context)
-			throws IOException, InterruptedException {
-		context.write(NullWritable.get(), new LongWritable(_value.getFirst()));
-		//System.out.println(HyperVertex.VertexID(_key.get()) + "\t" + _value.getFirst());
-	}
-}
-
-class CliqueCountV2Mapper2 extends
-		Mapper<LongWritable, HVArray, NullWritable, LongWritable> {
-	@Override
-	public void map(LongWritable _key, HVArray _value, Context context)
-			throws IOException, InterruptedException {
-		long count = CliqueEncoder.getNumCliquesFromEncodedArrayV2(_value.toArrays());
-		context.write(NullWritable.get(), new LongWritable(count));
-		//if (_key.get() == HyperVertex.get(100009, 15))
-		//System.out.println(HyperVertex.VertexID(_key.get()) + "\t" + count);
-	}
-}
 
 
 
