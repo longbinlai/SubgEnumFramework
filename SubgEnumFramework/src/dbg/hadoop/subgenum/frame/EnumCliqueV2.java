@@ -1,21 +1,15 @@
 package dbg.hadoop.subgenum.frame;
 
-import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongLongHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -24,12 +18,10 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Logger;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Graph;
-import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 import dbg.hadoop.subgraphs.utils.Utility;
@@ -45,16 +37,12 @@ public class EnumCliqueV2 {
 		Configuration conf = new Configuration();
 		conf.setBoolean("count.only", isCountOnly);
 		conf.setStrings("clique.number.vertices", inputInfo.cliqueNumVertices);
-		conf.setBoolean("result.compression", inputInfo.isResultCompression);
-		conf.setBoolean("count.only", isCountOnly);
 		
 		FileStatus[] files = Utility.getFS().listStatus(new Path(workDir + Config.cliques));
 		for(FileStatus f : files){
 			DistributedCache.addCacheFile(f.getPath().toUri(), conf);
 		}
-		//DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
-		//			.toString() + "/" + Config.cliques), conf);
-		
+
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.res",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
 		
@@ -101,7 +89,6 @@ class EnumCliqueV2EnumReducer extends
 	private static TLongLongHashMap cliqueMap = null;
 	private static TLongHashSet localCliqueSet = null;
 	private static boolean isCountOnly = false;
-	private static Logger log = Logger.getLogger(EnumCliqueV2EnumReducer.class);
 	private static Graph g = null;
 	
 	@Override
@@ -109,7 +96,6 @@ class EnumCliqueV2EnumReducer extends
 			Context context) throws IOException, InterruptedException {
 		g.clear();
 		localCliqueSet.clear();
-		int cnt = 0;
 		boolean mapHasKey = cliqueMap.contains(_key.get());
 		boolean noAddEdge = mapHasKey;
 		for (HVArray val : values) {
@@ -122,52 +108,23 @@ class EnumCliqueV2EnumReducer extends
 						&& cliqueMap.get(_key.get()) == cliqueMap.get(v1);
 			}
 			if (!noAddEdge) {
-				//if(HyperVertex.VertexID(_key.get()) == 29974) {
-				//	System.out.println("Edge: " + HyperVertex.toString(v1) + "," 
-				//			+ HyperVertex.toString(v2));
-				//}
 				g.addEdge(v1, v2);
 			} else {
-				//if(HyperVertex.VertexID(_key.get()) == 29974) {
-				//	System.out.println("LocalSet: " + HyperVertex.toString(v1) + "," 
-				//			+ HyperVertex.toString(v2));
-				//}
-				//localCliqueSet.add(v1);
-				//localCliqueSet.add(v2);
 				g.addSetNodes(v1);
 				g.addSetNodes(v2);
 			}
 		}
-		//if(localCliqueSet.size() > 20) {
-		//	System.out.println(HyperVertex.toString(_key.get()) + " has set size: " + localCliqueSet.size());
-		//}
-		/*
-		if(localCliqueSet.size() <= 50){
+		
+		//if(g.getLocalCliqueSetSize() <= 10){
 			//log.info("Add large local clique set with size : " + localCliqueSet.size());
-			long[] array = localCliqueSet.toArray();
-			for(int i = 0; i < array.length - 1; ++i){
-				for(int j = i + 1; j < array.length; ++j){
-					g.addEdge(array[i], array[j]);
-				}
-			}
-			localCliqueSet.clear();
-		}*/
-		g.setLocalCliqueSet(localCliqueSet);
+			//g.unfoldLocalCliqueSet();
+		//}
 		
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
-		
-		long start = System.currentTimeMillis();
 		long[] cliqueEnc = g.enumClique(k - 1, _key.get(), isCountOnly);
-		long end = System.currentTimeMillis();
-		
-		if(end - start > 60000) {
-			log.info("Time Elapsed: " + (end - start) / 1000 + " s");
-			log.info("#Nodes = " + g.getNodesNumber() + "; #Edges = " + g.getUnorientedSize() + 
-					"; Set Size = " + localCliqueSet.size());
-		}
-	
-		context.write(_key, new HVArray(cliqueEnc));
+		if(cliqueEnc != null)
+			context.write(_key, new HVArray(cliqueEnc));
 	}
 	
 	@Override

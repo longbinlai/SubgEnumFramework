@@ -52,7 +52,7 @@ public class GeneralDriver extends Configured implements Tool{
 	 */
 	public GeneralDriver(String _name,
 			Class<? extends Mapper> _mapperCls, 
-			Class<? extends Reducer> _reducerCls, 
+			Class<? extends Reducer> _reducerCls,
 			Class<? extends Writable> _outputKeyCls,
 			Class<? extends Writable> _outputValueCls,
 			Class<? extends InputFormat> _inputFormatCls,
@@ -61,6 +61,38 @@ public class GeneralDriver extends Configured implements Tool{
 		this.driverName = _name;
 		this.mapperClass1 = _mapperCls;
 		this.reducerClass = _reducerCls;
+		this.outputKeyClass = _outputKeyCls;
+		this.outputValueClass = _outputValueCls;
+		this.inputFormatClass1 = _inputFormatCls;
+		this.outputFormatClass = _outputFormatCls;
+		this.sortComparatorClass = _sortComparatorCls;
+	}
+	
+	
+	/**
+	 * @param _name
+	 * @param _mapperCls
+	 * @param _reducerCls
+	 * @param _combinerCls
+	 * @param _outputKeyCls
+	 * @param _outputValueCls
+	 * @param _inputFormatCls
+	 * @param _outputFormatCls
+	 * @param _sortComparatorCls
+	 */
+	public GeneralDriver(String _name,
+			Class<? extends Mapper> _mapperCls, 
+			Class<? extends Reducer> _reducerCls,
+			Class<? extends Reducer> _combinerCls,
+			Class<? extends Writable> _outputKeyCls,
+			Class<? extends Writable> _outputValueCls,
+			Class<? extends InputFormat> _inputFormatCls,
+			Class<? extends OutputFormat> _outputFormatCls,
+			Class<? extends RawComparator> _sortComparatorCls) {
+		this.driverName = _name;
+		this.mapperClass1 = _mapperCls;
+		this.reducerClass = _reducerCls;
+		this.combinerClass = _combinerCls;
 		this.outputKeyClass = _outputKeyCls;
 		this.outputValueClass = _outputValueCls;
 		this.inputFormatClass1 = _inputFormatCls;
@@ -175,8 +207,8 @@ public class GeneralDriver extends Configured implements Tool{
 		}
 
 		job.setOutputFormatClass(outputFormatClass);
-		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
+		//SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
+		//SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
 		
 		if(mapOutputKeyClass != null)
 			job.setMapOutputKeyClass(mapOutputKeyClass);

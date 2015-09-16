@@ -1,18 +1,10 @@
 package dbg.hadoop.subgenum.frame;
 
-import gnu.trove.map.hash.TLongLongHashMap;
-import gnu.trove.set.hash.TLongHashSet;
-
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -20,13 +12,10 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ToolRunner;
 
 import dbg.hadoop.subgraphs.io.HVArray;
-import dbg.hadoop.subgraphs.utils.Config;
 import dbg.hadoop.subgraphs.utils.Graph;
-import dbg.hadoop.subgraphs.utils.HyperVertex;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 import dbg.hadoop.subgraphs.utils.CliqueEncoder;
 
-@SuppressWarnings("deprecation")
 public class EnumClique {
 
 	public static void run(InputInfo inputInfo) throws Exception {
@@ -39,11 +28,6 @@ public class EnumClique {
 		conf.setStrings("clique.number.vertices", inputInfo.cliqueNumVertices);
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
 
-		//if(!isCountOnly){
-		//	DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
-		//			.toString() + "/" + Config.cliques), conf);
-		//}
-		
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.clique.res",	
 					inputInfo.numReducers, inputInfo.jarFile, inputInfo.cliqueNumVertices};
 		
@@ -95,6 +79,7 @@ class EnumCliqueMapper extends
 	}
 }
 
+@SuppressWarnings("deprecation")
 class EnumCliqueCountReducer extends 
 	Reducer<LongWritable,HVArray, LongWritable, LongWritable> {
 
@@ -115,6 +100,7 @@ class EnumCliqueCountReducer extends
 	}
 }
 
+@SuppressWarnings("deprecation")
 class EnumCliqueEnumReducer extends
 		Reducer<LongWritable, HVArray, LongWritable, HVArray> {
 	//private static TLongLongHashMap cliqueMap = null;
@@ -124,7 +110,6 @@ class EnumCliqueEnumReducer extends
 			Context context) throws IOException, InterruptedException {
 		Graph G = new Graph();
 		int cnt = 0;
-		boolean noAddEdge = false;
 		for (HVArray val : values) {
 			cnt = cnt + 1;
 			for (int i = 0; i < val.size(); i = i + 2) {
@@ -135,51 +120,9 @@ class EnumCliqueEnumReducer extends
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
 		long[] cliqueEnc = G.enumCliqueOfSize(k - 1, _key.get());
-		context.write(_key, new HVArray(cliqueEnc));
+		if(cliqueEnc != null)
+			context.write(_key, new HVArray(cliqueEnc));
 	}
-	
-	/*
-	@Override
-	public void setup(Context context) throws IOException{
-		Configuration conf = context.getConfiguration();
-
-		if (conf.getBoolean("result.compression", true) && cliqueMap == null) {
-			cliqueMap = new TLongLongHashMap();
-			FileSystem fs = FileSystem.get(conf);
-			Path[] paths = DistributedCache.getLocalCacheFiles(conf);
-			for (int i = 0; i < paths.length; ++i) {
-				if (paths[i].toString().contains("part-r-")) {
-					SequenceFile.Reader reader = new SequenceFile.Reader(fs, paths[i], conf);
-					LongWritable key = null;
-					HVArray val = null;
-					try {
-						key = (LongWritable) reader.getKeyClass().newInstance();
-						val = (HVArray) reader.getValueClass().newInstance();
-					} catch (InstantiationException e) {
-						e.printStackTrace();
-					} catch (IllegalAccessException e) {
-						e.printStackTrace();
-					}
-					while (reader.next(key, val)) {
-						for (long v : val.toArrays()) {
-							cliqueMap.put(v, key.get());
-						}
-					}
-					reader.close();
-
-				}
-			}
-		}
-	}
-	
-	@Override
-	public void cleanup(Context context){
-		if(cliqueMap != null){
-			cliqueMap.clear();
-			cliqueMap = null;
-		}
-	}
-	*/
 }
 
 class CliqueCountMapper1 extends

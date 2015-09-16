@@ -46,6 +46,14 @@ public class HVArray implements WritableComparable, Writable {
 		this.set(array);
 	}
 	
+	public HVArray(Long[] array){
+		this.hyperVertexArray = new long[array.length];
+		this.length = array.length;
+		for(int i = 0; i < this.length; ++i) {
+			this.hyperVertexArray[i] = array[i];
+		}
+	}
+	
 	public HVArray(long[] smallerThanCur, long cur, long[] largerThanCur){
 		int len1 = smallerThanCur.length;
 		int len2 = largerThanCur.length;

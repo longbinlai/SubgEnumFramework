@@ -1,11 +1,8 @@
 package dbg.hadoop.subgraphs.utils;
 
 import gnu.trove.iterator.TLongIterator;
-import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
-import gnu.trove.map.hash.TLongLongHashMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedWriter;
@@ -13,14 +10,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.BitSet;
 
 import org.apache.log4j.Logger;
 
@@ -70,22 +65,6 @@ public class Graph{
 			}
 		}
 
-	}
-	
-	public void setLocalCliqueSet(TLongHashSet set) {
-		this.cliqueSet = set;
-	}
-	
-	public void clearLocalCliqueSet() {
-		this.cliqueSet.clear();
-	}
-	
-	public void addSetNodes(long a) {
-		this.cliqueSet.add(a);
-	}
-	
-	public int getLocalCliqueSetSize() {
-		return this.cliqueSet.size();
 	}
 	
 	public int getNodesNumber() {
@@ -250,10 +229,6 @@ public class Graph{
 		long[] curClique = new long[cliqueSize];
 		long a = 0L;
 		countRunning = 0L;
-		
-		long start = 0;
-		long end = 0;
-		long total = 0;
 
 		while (it.hasNext()) {
 			a = it.next();
@@ -346,7 +321,6 @@ public class Graph{
 		it = l.iterator();
 		
 		long a = 0L;
-		long start = 0, end = 0, total = 0;
 			
 		while (it.hasNext()) {
 			a = it.next();
@@ -739,6 +713,50 @@ public class Graph{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Set local clique set
+	 * @param set
+	 */
+	public void setLocalCliqueSet(TLongHashSet set) {
+		this.cliqueSet = set;
+	}
+	
+	/**
+	 * Clear local clique set
+	 */
+	public void clearLocalCliqueSet() {
+		this.cliqueSet.clear();
+	}
+	
+	/**
+	 * Add node to local clique set
+	 * @param a
+	 */
+	public void addSetNodes(long a) {
+		this.cliqueSet.add(a);
+	}
+	
+	public int getLocalCliqueSetSize() {
+		return this.cliqueSet.size();
+	}
+	
+	/**
+	 * As nodes in local clique set form a large clique, 
+	 * in the case that the local clique set is relatively small (<20) when
+	 * we do not apply the clique compression, we simply add the edges
+	 * (must be mutually connected among vertices in local clique set) back
+	 * and the clique enumeration will follow the normal routine.
+	 */
+	public void unfoldLocalCliqueSet() {
+		long[] array = this.cliqueSet.toArray();
+		for(int i = 0; i < array.length - 1; ++i) {
+			for(int j = i + 1; j < array.length; ++j) {
+				this.addEdge(array[i], array[j]);
+			}
+		}
+		this.cliqueSet.clear();
 	}
 	
 	public void clear() {

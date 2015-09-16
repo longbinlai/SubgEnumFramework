@@ -75,6 +75,10 @@ public class CliqueEncoder{
     TLongArrayList buffer = new TLongArrayList(cliqueSet.size() + normalBuffer.size() + 3);
     buffer.add(v);
     buffer.add((long)k);
+    if((cliqueSetSize == -1 || cliqueSet.size() == 0)
+    		&& normalBuffer.size() == 0) {
+    	return null;
+    }
     if(cliqueSet.size() != 0){
     	buffer.add(cliqueSet.size());
     }
