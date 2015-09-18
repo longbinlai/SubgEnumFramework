@@ -115,11 +115,6 @@ class EnumCliqueV2EnumReducer extends
 			}
 		}
 		
-		//if(g.getLocalCliqueSetSize() <= 10){
-			//log.info("Add large local clique set with size : " + localCliqueSet.size());
-			//g.unfoldLocalCliqueSet();
-		//}
-		
 		Configuration conf = context.getConfiguration();
 		int k = Integer.parseInt(conf.get("clique.number.vertices"));
 		long[] cliqueEnc = g.enumClique(k - 1, _key.get(), isCountOnly);
