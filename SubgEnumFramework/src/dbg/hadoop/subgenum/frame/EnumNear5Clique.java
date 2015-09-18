@@ -39,9 +39,12 @@ public class EnumNear5Clique {
 		String workDir = inputInfo.workDir;
 		Configuration conf = new Configuration();
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
+		boolean isCountOnly = inputInfo.isCountOnly;
 		
 		if(!inputInfo.isFourCliqueSkip){
 			inputInfo.cliqueNumVertices = "4"; // Make sure that 4clique is enumerated
+			inputInfo.isCountOnly = false; // We cannot apply count-only to intermediate results
 			if(inputInfo.isResultCompression) {
 				EnumCliqueV2.run(inputInfo);
 			}
@@ -49,35 +52,64 @@ public class EnumNear5Clique {
 				EnumClique.run(inputInfo);
 			}
 		}
-		
+		inputInfo.isCountOnly = isCountOnly;
 		
 		FileStatus[] files = Utility.getFS().listStatus(new Path(workDir + Config.cliques));
 		for(FileStatus f : files){
 			DistributedCache.addCacheFile(f.getPath().toUri(), conf);
 		}
 
-		String[] opts2 = { workDir + "triangle.res", workDir + "frame.clique.res",	
+		String[] opts = { workDir + "triangle.res", workDir + "frame.clique.res",	
 				workDir + "frame.near5clique.res", inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new GeneralDriver("Frame Near5Clique", 
-				EnumHouseTriangleMapper.class,
-				EnumNear5CliqueMapper.class,
-				EnumNear5CliqueReducer.class, 
-				HVArray.class, HVArray.class, //OutputKV
-				HVArraySign.class, HVArray.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArraySignComparator.class, 
-				HVArrayGroupComparator.class), opts2);			
+		if (!inputInfo.isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver(
+					"Frame Near5Clique",
+					EnumHouseTriangleMapper.class,
+					EnumNear5CliqueMapper.class,
+					EnumNear5CliqueReducer.class,
+					HVArray.class,
+					HVArray.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver(
+					"Frame Near5Clique",
+					EnumHouseTriangleMapper.class,
+					EnumNear5CliqueMapper.class,
+					EnumNear5CliqueCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts);
+		}
 	}
 
 	public static void countOnce(InputInfo inputInfo) throws Exception{
-		if (inputInfo.isCountPatternOnce && inputInfo.isResultCompression) {
-			String[] opts3 = { inputInfo.workDir + "frame.near5clique.res",
+		if (inputInfo.isCountPatternOnce) {
+			String[] opts = { inputInfo.workDir + "frame.near5clique.res",
 					inputInfo.workDir + "frame.near5clique.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
-					Near5CliqueCountMapper.class), opts3);
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts);
+			}
+			else if(inputInfo.isResultCompression) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+					Near5CliqueCountMapper.class), opts);
+			}
+			else {
+				System.out.println("Not count needed");
+			}
 		}
 	}
 
@@ -365,6 +397,73 @@ class EnumNear5CliqueReducer extends
 	}
 }
 
+class EnumNear5CliqueCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+
+	// private static TLongArrayList triangleList = null;
+	private static TLongHashSet triSet = null;
+	private static boolean isCompress = false;
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> _values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		// System.out.println(isCompress);
+		long count = 0L;
+
+		triSet.clear();
+		long v3 = 0, v4 = 0;
+		for (HVArray value : _values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				triSet.add(value.getFirst());
+			} else {
+				if (value.size() > 2) {
+					long[] cliqueArray = value.toArrays();
+					for (int j = 0; j < cliqueArray.length - 1; ++j) {
+						for (int k = j + 1; k < cliqueArray.length; ++k) {
+							count += triSet.size();
+							if (triSet.contains(cliqueArray[j])) {
+								count -= 1;
+							}
+							if (triSet.contains(cliqueArray[k])) {
+								count -= 1;
+							}
+							// System.out.println("count = " + count);
+						}
+					}
+
+				} else {
+					v3 = value.getFirst();
+					v4 = value.getSecond();
+					count += triSet.size();
+					if (triSet.contains(v3)) {
+						count -= 1;
+					}
+					if (triSet.contains(v4)) {
+						count -= 1;
+					}
+				}
+			}
+		}
+		context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+	@Override
+	public void setup(Context context) {
+		triSet = new TLongHashSet();
+		isCompress = context.getConfiguration().getBoolean(
+				"result.compression", false);
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		triSet.clear();
+		triSet = null;
+	}
+}
+
 class Near5CliqueCountMapper extends
 		Mapper<HVArray, HVArray, NullWritable, LongWritable> {
 	
@@ -403,9 +502,6 @@ class Near5CliqueCountMapper extends
 				int cliqueSize = (int) array[i];
 				long[] cliqueArray = Arrays.copyOfRange(array, i + 1, i + 1
 						+ cliqueSize);
-				//System.out.println(HyperVertex.HVArrayToString(cliqueArray));
-				//System.out.println("count = " + count);
-				//if(cliqueArray[0] != -1) {
 				for (int j = 0; j < cliqueArray.length - 1; ++j) {
 					for (int k = j + 1; k < cliqueArray.length; ++k) {
 						count += triSize;
@@ -415,24 +511,11 @@ class Near5CliqueCountMapper extends
 						if (triSet.contains(cliqueArray[k])) {
 							count -= 1;
 						}
-						// System.out.println("count = " + count);
 					}
 				}
-				//} else {
-				//	if(triSet.contains(cliqueArray[1])) {
-				//		count -= cliqueArray.length - 2;
-				//	}
-				//	for(int j = 2; j < cliqueArray.length; ++j) {
-				//		count += triSize;
-				//		if(triSet.contains(cliqueArray[j])) {
-				//			count -= 1;
-				//		}
-				//	}
-				//}
 				i += cliqueSize + 1;
 			}
 		}
-		//System.out.println(count);
 		context.write(NullWritable.get(), new LongWritable(count));
 	}
 	

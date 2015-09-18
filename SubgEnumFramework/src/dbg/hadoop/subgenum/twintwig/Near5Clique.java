@@ -2,6 +2,7 @@ package dbg.hadoop.subgenum.twintwig;
 
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.IOException;
 import java.net.URI;
@@ -42,6 +43,7 @@ public class Near5Clique{
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;
 		boolean enableBF = inputInfo.enableBF;
+		boolean isCountOnly = inputInfo.isCountOnly;
 		
 		String jarFile = inputInfo.jarFile;
 		String numReducers = inputInfo.numReducers;
@@ -55,8 +57,10 @@ public class Near5Clique{
 		String output = workDir + "tt.near5clique.res";
 		
 		if(!inputInfo.isFourCliqueSkip){
+			inputInfo.isCountOnly = false;
 			FourClique.run(inputInfo);
 		}
+		inputInfo.isCountOnly = isCountOnly;
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);
@@ -78,17 +82,37 @@ public class Near5Clique{
 		String[] opts = { adjListDir, stageOneOutput, stageTwoOutput,
 				numReducers, jarFile };
 		
-		ToolRunner.run(conf, new GeneralDriver("TwinTwig Near5Clique", 
-				Near5CliqueMapper1.class,
-				Near5CliqueMapper2.class,
-				Near5CliqueReducer.class, 
-				NullWritable.class, HVArray.class, //OutputKV
-				HVArraySign.class, HVArray.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArraySignComparator.class, 
-				HVArrayGroupComparator.class), opts);
+		if (!isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver(
+					"TwinTwig Near5Clique",
+					Near5CliqueMapper1.class,
+					Near5CliqueMapper2.class,
+					Near5CliqueReducer.class,
+					NullWritable.class,
+					HVArray.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver(
+					"TwinTwig Near5Clique",
+					Near5CliqueMapper1.class,
+					Near5CliqueMapper2.class,
+					Near5CliqueCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts);
+		}
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
@@ -189,8 +213,6 @@ class Near5CliqueReducer extends
 				}
 			}
 		}
-
-		
 	}
 	
 	@Override
@@ -202,5 +224,51 @@ class Near5CliqueReducer extends
 	public void cleanup(Context context){
 		ttList.clear();
 		ttList = null;
+	}
+}
+
+class Near5CliqueCountReducer extends
+	Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+private static TLongHashSet triSet = null;
+	
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {	
+		if(_key.sign != Config.SMALLSIGN){
+			return;
+		}
+		triSet.clear();
+		long count = 0L;
+		long v3 = 0, v4 = 0;
+		//long v2 = _key.vertexArray.getFirst();
+		//long v5 = _key.vertexArray.getSecond();
+		for(HVArray value : values){
+			if(_key.sign == Config.SMALLSIGN)
+				//ttList.add(value.getFirst());
+				triSet.add(value.getFirst());
+			else {
+				count += triSet.size();
+				v3 = value.getFirst();
+				v4 = value.getSecond();
+				if(triSet.contains(v3)) {
+					count -= 1;
+				}
+				if(triSet.contains(v4)) {
+					count -= 1;
+				}
+			}
+		}
+		context.write(NullWritable.get(), new LongWritable(count));
+	}
+	
+	@Override
+	public void setup(Context context){
+		triSet = new TLongHashSet();
+	}
+	
+	@Override
+	public void cleanup(Context context){
+		triSet.clear();
+		triSet = null;
 	}
 }

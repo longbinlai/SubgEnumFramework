@@ -157,12 +157,8 @@ public class MainEntry{
 					Utility.getFS().delete(new Path(workDir + "frame.clique.res"));
 				}
 			}
-			if (Utility.getFS().isDirectory(new Path(workDir + "frame.near5clique.res"))) {
-				Utility.getFS().delete(new Path(workDir + "frame.near5clique.res"));
-			}
-			if (Utility.getFS().isDirectory(new Path(workDir + "frame.near5clique.cnt"))) {
-				Utility.getFS().delete(new Path(workDir + "frame.near5clique.cnt"));
-			}
+			Utility.getFS().delete(new Path(workDir + "frame.near5clique.res"));
+			Utility.getFS().delete(new Path(workDir + "frame.near5clique.cnt"));
 			log.info("Start enumerating near5clique...");
 			startTime = System.currentTimeMillis();
 			
