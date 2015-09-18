@@ -79,7 +79,9 @@ public class TwinTriangle {
 		
 		String[] opts1 = { workDir + "adjList2." + maxSize, stageOneOutput, stageTwoOutput,
 				inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new GeneralDriver("TwinTwig TwinTriangle Stage Two", 
+		
+		if(!inputInfo.isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver("TwinTwig TwinTriangle Stage Two", 
 				TwinTriangleStageTwoMapper1.class, 
 				TwinTriangleStageTwoMapper2.class,
 				TwinTriangleStageTwoReducer.class, 
@@ -89,6 +91,19 @@ public class TwinTriangle {
 				SequenceFileInputFormat.class,
 				SequenceFileOutputFormat.class, 
 				HVArraySignComparator.class, HVArrayGroupComparator.class), opts1);
+		}
+		else {
+			ToolRunner.run(conf, new GeneralDriver("TwinTwig TwinTriangle Stage Two", 
+					TwinTriangleStageTwoMapper1.class, 
+					TwinTriangleStageTwoMapper2.class,
+					TwinTriangleStageTwoCountReducer.class, 
+				    NullWritable.class, LongWritable.class, //OutputKV
+					HVArraySign.class, HVArray.class, //MapOutputKV
+					SequenceFileInputFormat.class, 
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class, 
+					HVArraySignComparator.class, HVArrayGroupComparator.class), opts1);
+		}
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
@@ -369,6 +384,54 @@ class TwinTriangleStageTwoReducer extends
 		}
 	}
 	
+	@Override
+	public void setup(Context context) {
+		list = new TLongArrayList();
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		list.clear();
+		list = null;
+	}
+}
+
+class TwinTriangleStageTwoCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+
+	private static TLongArrayList list = null;
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		
+		long count = 0L;
+		long v1, v2, v3;
+
+		list.clear();
+
+		for (HVArray val : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				list.add(val.getFirst());
+			} else {
+				v1 = val.getFirst();
+				v2 = val.getSecond();
+				TLongIterator iter = list.iterator();
+				while (iter.hasNext()) {
+					v3 = iter.next();
+					if (v1 != v3 && v2 != v3 && v1 < v3) {
+						count += 1;
+					}
+				}
+			}
+		}
+		if(count != 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
 	@Override
 	public void setup(Context context) {
 		list = new TLongArrayList();

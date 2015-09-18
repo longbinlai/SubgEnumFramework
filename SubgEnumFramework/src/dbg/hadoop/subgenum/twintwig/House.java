@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.set.hash.TLongHashSet;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayGroupComparator;
@@ -81,6 +82,7 @@ public class House{
 		String[] opts1 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new SquareDriver(), opts1);
 		
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String[] opts2 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, stageTwoOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new HouseStageTwoDriver(), opts2);
 
@@ -107,13 +109,21 @@ class HouseStageTwoDriver extends Configured implements Tool{
 		Job job = new Job(conf, "TwinTwig House Stage Two");
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		//JobConf job = new JobConf(getConf(), this.getClass());
+		boolean isCountOnly = conf.getBoolean("count.only", false);
 		
-		job.setReducerClass(HouseStageTwoReducer.class);
 		
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(HVArray.class);
+		
+		if(!isCountOnly) {
+			job.setReducerClass(HouseStageTwoReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else {
+			job.setReducerClass(HouseStageTwoCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
 		
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -243,6 +253,51 @@ class HouseStageTwoReducer extends
 	public void cleanup(Context context){
 		ttList.clear();
 		ttList = null;
+	}
+}
+
+class HouseStageTwoCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+	private static TLongHashSet triSet = null;
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		triSet.clear();
+		long v3, v4;
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				triSet.add(value.getFirst());
+			} else {
+				v3 = value.getFirst();
+				v4 = value.getSecond();
+				count += triSet.size();
+				if(triSet.contains(v3)) {
+					count -= 1;
+				}
+				if(triSet.contains(v4)) {
+					count -= 1;
+				}
+			}
+		}
+		if(count > 0) {
+			context.write(NullWritable.get(), new LongWritable(count));
+		}
+	}
+
+	@Override
+	public void setup(Context context) {
+		triSet = new TLongHashSet();
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		triSet.clear();
+		triSet = null;
 	}
 }
 

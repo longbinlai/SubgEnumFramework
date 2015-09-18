@@ -447,7 +447,8 @@ class EnumNear5CliqueCountReducer extends
 				}
 			}
 		}
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 
 	@Override
@@ -516,7 +517,8 @@ class Near5CliqueCountMapper extends
 				i += cliqueSize + 1;
 			}
 		}
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 	
 	@Override

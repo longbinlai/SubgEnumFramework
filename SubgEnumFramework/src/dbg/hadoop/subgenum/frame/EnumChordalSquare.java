@@ -40,23 +40,48 @@ public class EnumChordalSquare {
 		
 		String[] opts = { workDir + "triangle.res", "", workDir + "frame.csquare.res",
 				inputInfo.numReducers, inputInfo.jarFile};
-		ToolRunner.run(conf, new GeneralDriver("Frame ChordalSquare", 
-				EnumChordalSquareMapper.class, 
-				EnumChordalSquareReducer.class, 
-			    HVArray.class, HVArray.class, //OutputKV
-				HVArray.class, LongWritable.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArrayComparator.class), opts);
+		
+		if (!inputInfo.isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver("Frame ChordalSquare",
+					EnumChordalSquareMapper.class,
+					EnumChordalSquareReducer.class,
+					HVArray.class,
+					HVArray.class, // OutputKV
+					HVArray.class,
+					LongWritable.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class, HVArrayComparator.class),
+					opts);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver("Frame ChordalSquare",
+					EnumChordalSquareMapper.class,
+					EnumChordalSquareCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArray.class,
+					LongWritable.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class, HVArrayComparator.class),
+					opts);
+		}
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
-		if (inputInfo.isCountPatternOnce && inputInfo.isResultCompression) {
+		if (inputInfo.isCountPatternOnce) {
 			String[] opts2 = { inputInfo.workDir + "frame.csquare.res",
 					inputInfo.workDir + "frame.csquare.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts2);
+			}
+			else if(inputInfo.isResultCompression) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					ChordalSquareCountMapper.class), opts2);
+			}
+			else {
+				System.out.println("Not count needed");
+			}
 		}
 	}
 }
@@ -94,8 +119,10 @@ class EnumChordalSquareReducer extends
 		heap.sort();
 		long[] array = heap.toArray();
 		boolean isOutput = true;
-		if(isResultCompression)
-			context.write(_key, new HVArray(array));
+		if(isResultCompression) {
+			if(array.length > 1)
+				context.write(_key, new HVArray(array));
+		}
 		else{
 			for(int i = 0; i < array.length - 1; ++i){
 				for(int j = i + 1; j < array.length; ++j){
@@ -140,6 +167,22 @@ class EnumChordalSquareReducer extends
 	}
 } 
 
+class EnumChordalSquareCountReducer extends
+		Reducer<HVArray, LongWritable, NullWritable, LongWritable> {
+
+	@Override
+	public void reduce(HVArray _key, Iterable<LongWritable> values,
+			Context context) throws IOException, InterruptedException {
+		long count = 0L;
+		for (LongWritable val : values) {
+			count += 1;
+		}
+		if(count > 1)
+			context.write(NullWritable.get(), new LongWritable(count * (count - 1) / 2));
+	}
+
+}
+
 
 class ChordalSquareCountMapper extends
 		Mapper<HVArray, HVArray, NullWritable, LongWritable> {
@@ -147,6 +190,7 @@ class ChordalSquareCountMapper extends
 	public void map(HVArray _key, HVArray _value, Context context)
 			throws IOException, InterruptedException {
 		long size = _value.size();
-		context.write(NullWritable.get(), new LongWritable(size * (size - 1) / 2));
+		if(size > 1)
+			context.write(NullWritable.get(), new LongWritable(size * (size - 1) / 2));
 	}
 }

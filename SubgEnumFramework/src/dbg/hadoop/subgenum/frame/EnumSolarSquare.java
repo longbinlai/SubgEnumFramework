@@ -36,6 +36,7 @@ public class EnumSolarSquare{
 		conf.setBoolean("result.compression", inputInfo.isResultCompression);
 		conf.setBoolean("enable.bloom.filter", inputInfo.enableBF);
 		conf.setBoolean("enum.solarsquare.chordalsquare.partition", inputInfo.isChordalSquarePartition);
+		boolean isCountOnly = inputInfo.isCountOnly;
 
 		if(inputInfo.enableBF){
 			String bloomFilterFileName = "bloomFilter." + Config.TWINTWIG1 + "." + inputInfo.falsePositive;
@@ -49,15 +50,18 @@ public class EnumSolarSquare{
 		}
 		
 		if(!inputInfo.isChordalSquareSkip){
+			inputInfo.isCountOnly = false;
 			EnumChordalSquare.run(inputInfo);
 		}
+		inputInfo.isCountOnly = isCountOnly;
 
 		String[] opts = { workDir + "frame.csquare.res", "", workDir + "frame.solarsquare.res", 
 				inputInfo.numReducers, inputInfo.jarFile };
 		if(inputInfo.isChordalSquarePartition && inputInfo.isResultCompression){
 			opts[0] = workDir + "frame.csquare.res.part";
 		}
-		ToolRunner.run(conf, new GeneralDriver("Frame SolarSquare", 
+		if(!isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver("Frame SolarSquare", 
 				EnumSolarSquareMapper.class, 
 				EnumSolarSquareReducer.class, 
 			    HVArray.class, HVArray.class, //OutputKV
@@ -65,15 +69,35 @@ public class EnumSolarSquare{
 				SequenceFileInputFormat.class, 
 				SequenceFileOutputFormat.class,
 				HVArrayComparator.class), opts);
+		}
+		else {
+			ToolRunner.run(conf, new GeneralDriver("Frame SolarSquare", 
+					EnumSolarSquareMapper.class, 
+					EnumSolarSquareCountReducer.class, 
+				    NullWritable.class, LongWritable.class, //OutputKV
+					HVArray.class, LongWritable.class, //MapOutputKV
+					SequenceFileInputFormat.class, 
+					SequenceFileOutputFormat.class,
+					HVArrayComparator.class), opts);
+		}
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
-		if(inputInfo.isCountPatternOnce && inputInfo.isResultCompression){
+		if(inputInfo.isCountPatternOnce){
 			String[] opts = { inputInfo.workDir + "frame.solarsquare.res",
 					inputInfo.workDir + "frame.solarsquare.cnt", 
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts);
+			}
+			else if(inputInfo.isResultCompression) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					SolarSquareCountMapper.class), opts);
+			}
+			else {
+				System.out.println("Not count needed");
+			}
 		}
 	}
 }
@@ -90,7 +114,6 @@ class EnumSolarSquareMapper extends
 	@Override
 	public void map(HVArray _key, HVArray _value,
 			Context context) throws IOException, InterruptedException {
-		boolean isOutput = true;
 		if(!isCompress){
 			context.write(new HVArray(_key.getFirst(), _value.getFirst(), _value.getSecond()),
 				new LongWritable(_key.getSecond()));
@@ -207,6 +230,35 @@ class EnumSolarSquareReducer extends
 	}
 }
 
+class EnumSolarSquareCountReducer extends
+		Reducer<HVArray, LongWritable, NullWritable, LongWritable> {
+	
+	private TLongArrayList heap = null;
+
+	@Override
+	public void reduce(HVArray _key, Iterable<LongWritable> values,
+			Context context) throws IOException, InterruptedException {
+		heap.clear();
+		for (LongWritable val : values) {
+			heap.add(val.get());
+		}
+		heap.sort();
+		long count = 0L;
+		long[] array = heap.toArray();
+
+		int largeThanMinIndex = BinarySearch.findLargeIndex(
+					_key.getSecond(), array);
+		count = (2 * heap.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+	@Override
+	public void setup(Context context) {
+		heap = new TLongArrayList();
+	}
+}
+
 class SolarSquareCountMapper extends
 		Mapper<HVArray, HVArray, NullWritable, LongWritable> {
 	@Override
@@ -215,6 +267,7 @@ class SolarSquareCountMapper extends
 		long count = 0L;
 		int largeThanMinIndex = BinarySearch.findLargeIndex(_key.getSecond(), _value.toArrays());
 		count = (2 * _value.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 }

@@ -29,23 +29,53 @@ public class EnumTwinTriangle {
 		
 		String[] opts = { workDir + "triangle.res", "",
 				workDir + "frame.twintriangle.res",  inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new GeneralDriver("Frame Square", 
-						EnumTwinTriangleMapper.class, 
-						EnumTwinTriangleReducer.class, 
-						LongWritable.class, HVArray.class, //OutputKV
-						//LongWritable.class, HVArray.class, //MapOutputKV
-						SequenceFileInputFormat.class, 
-						SequenceFileOutputFormat.class,
-						HyperVertexComparator.class), opts);
+		
+		if (!inputInfo.isCountOnly) {
+			ToolRunner.run(conf,
+					new GeneralDriver(
+							"Frame Square",
+							EnumTwinTriangleMapper.class,
+							EnumTwinTriangleReducer.class,
+							LongWritable.class,
+							HVArray.class, // OutputKV
+							// LongWritable.class, HVArray.class, //MapOutputKV
+							SequenceFileInputFormat.class,
+							SequenceFileOutputFormat.class,
+							HyperVertexComparator.class), opts);
+		}
+		else {
+			ToolRunner.run(conf,
+					new GeneralDriver(
+							"Frame Square",
+							EnumTwinTriangleMapper.class,
+							EnumTwinTriangleCountReducer.class,
+							NullWritable.class,
+							LongWritable.class, // OutputKV
+							LongWritable.class,
+							HVArray.class, // MapOutputKV
+							SequenceFileInputFormat.class,
+							SequenceFileOutputFormat.class,
+							HyperVertexComparator.class), opts);
+		}
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
-		if (inputInfo.isCountPatternOnce && inputInfo.isResultCompression) {
+		if (inputInfo.isCountPatternOnce) {
 			String[] opts = { inputInfo.workDir + "frame.twintriangle.res",
 					inputInfo.workDir + "frame.twintriangle.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+			
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(),  new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts);
+			}
+			else if(inputInfo.isResultCompression) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					TwinTriangleCountMapper.class), opts);
+			}
+			else {
+				System.out.println("Not count needed.");
+			}
 		}
 	}
 }
@@ -146,6 +176,74 @@ class EnumTwinTriangleReducer extends
 	}
 }
 
+class EnumTwinTriangleCountReducer extends
+		Reducer<LongWritable, HVArray, NullWritable, LongWritable> {
+
+	ArrayList<HVArray> heap = null;
+	TLongIntHashMap firstItemMap = null;
+
+	@Override
+	public void reduce(LongWritable _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (heap.size() != 0) {
+			heap.clear();
+		}
+		for (HVArray val : values) {
+			heap.add(new HVArray(val));
+		}
+		// heap.sort();
+		HVArray[] array = heap.toArray(new HVArray[0]);
+		Arrays.sort(array);
+		// Comparable<HVArray>[] array = heap.toArray();
+	
+		long curItem = -1L;
+		long count = 0L;
+		long v1, v2, v3, v4;
+		firstItemMap.clear();
+		for (int i = 0; i < array.length; ++i) {
+			v1 = array[i].getFirst();
+			if (curItem != v1) {
+				if (curItem == -1) {
+					firstItemMap.put(v1, 0);
+				} else {
+					firstItemMap.put(v1, firstItemMap.get(curItem));
+				}
+				curItem = v1;
+			}
+			firstItemMap.increment(v1);
+		}
+		for (int i = 0; i < array.length; ++i) {
+			v1 = array[i].getFirst();
+			v2 = array[i].getSecond();
+
+			for (int j = firstItemMap.get(v1); j < array.length; ++j) {
+				v3 = array[j].getFirst();
+				v4 = array[j].getSecond();
+				if (v2 != v3 && v2 != v4) {
+					++count;
+				}
+			}
+		}
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+	@Override
+	public void setup(Context context) {
+		heap = new ArrayList<HVArray>();
+		firstItemMap = new TLongIntHashMap();
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		heap = null;
+		if (firstItemMap != null) {
+			firstItemMap.clear();
+			firstItemMap = null;
+		}
+	}
+}
+
 class TwinTriangleCountMapper extends
 		Mapper<LongWritable, HVArray, NullWritable, LongWritable> {
 	
@@ -188,7 +286,8 @@ class TwinTriangleCountMapper extends
 			if(index < array.length)
 				count += (array.length - index) / 2;
 		}
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 	
 	@Override

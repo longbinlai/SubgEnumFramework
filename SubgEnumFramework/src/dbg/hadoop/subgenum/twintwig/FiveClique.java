@@ -96,6 +96,7 @@ public class FiveClique{
 		ToolRunner.run(conf, new FiveCliqueStageThreeDriver(), opts3);
 		
 		conf.setInt("twin.twig.output.key.map", 7);
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String opts4[] = {adjListDir, stageThreeOutput, stageFourOutput, numReducers, jarFile};
 		ToolRunner.run(conf, new FiveCliqueStageFourDriver(), opts4);
 		
@@ -286,13 +287,20 @@ class FiveCliqueStageFourDriver extends Configured implements Tool{
 		Job job = new Job(conf, "TwinTwig FiveClique Stage Four");
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		//JobConf job = new JobConf(getConf(), this.getClass());
-		
-		job.setReducerClass(FiveCliqueStageFourReducer.class);
+		boolean isCountOnly = conf.getBoolean("count.only", false);
 		
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(HVArray.class);
+		
+		if(!isCountOnly) {
+			job.setReducerClass(FiveCliqueStageFourReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else{
+			job.setReducerClass(FiveCliqueStageFourCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
 		
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -345,6 +353,29 @@ class FiveCliqueStageFourReducer extends
 			} else {
 				context.write(NullWritable.get(), value);
 			}
+		}
+	}
+}
+
+class FiveCliqueStageFourCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				continue;
+			} else {
+				++count;
+			}
+		}
+		if(count != 0) {
+			context.write(NullWritable.get(), new LongWritable(count));
 		}
 	}
 }

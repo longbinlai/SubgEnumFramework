@@ -136,6 +136,8 @@ class EnumCliqueV2EnumReducer extends
 			localCliqueSet = new TLongHashSet();
 			cliqueMap = new TLongLongHashMap();
 			Path[] paths = DistributedCache.getLocalCacheFiles(conf);
+			LongWritable key = null;
+			HVArray val = null;
 			for (int i = 0; i < paths.length; ++i) {
 				if (paths[i].toString().contains("part-r-")) {
 					LocalFileSystem fs = new LocalFileSystem();
@@ -143,8 +145,6 @@ class EnumCliqueV2EnumReducer extends
 							&& !paths[i].toString().endsWith(".crc")) {
 						SequenceFile.Reader reader = new SequenceFile.Reader(
 								fs, paths[i], conf);
-						LongWritable key = null;
-						HVArray val = null;
 						try {
 							key = (LongWritable) reader.getKeyClass()
 									.newInstance();

@@ -101,17 +101,37 @@ public class SolarSquare{
 		String[] opts3 = { workDir + Config.adjListDir + "." + maxSize,
 				stageTwoOutput, stageThreeOutput, numReducers, jarFile };
 		
-		ToolRunner.run(conf, new GeneralDriver("TwinTwig Solar Square Stage Three", 
-				SolarSquareStageThreeMapper1.class,
-				SolarSquareStageThreeMapper2.class,
-				SolarSquareStageThreeReducer.class, 
-				NullWritable.class, HVArray.class, //OutputKV
-				HVArraySign.class, HVArray.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArraySignComparator.class, 
-				HVArrayGroupComparator.class), opts3);
+		if (!inputInfo.isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver(
+					"TwinTwig Solar Square Stage Three",
+					SolarSquareStageThreeMapper1.class,
+					SolarSquareStageThreeMapper2.class,
+					SolarSquareStageThreeReducer.class,
+					NullWritable.class,
+					HVArray.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts3);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver(
+					"TwinTwig Solar Square Stage Three",
+					SolarSquareStageThreeMapper1.class,
+					SolarSquareStageThreeMapper2.class,
+					SolarSquareStageThreeCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts3);
+		}
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
@@ -415,6 +435,27 @@ class SolarSquareStageThreeReducer extends
 				context.write(NullWritable.get(), new HVArray(array));
 			}
 		}
+	}
+}
+
+class SolarSquareStageThreeCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		for (HVArray val : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				continue;
+			} else {
+				++count;
+			}
+		}
+		if(count != 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 }
 

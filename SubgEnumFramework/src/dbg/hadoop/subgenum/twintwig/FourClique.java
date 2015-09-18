@@ -69,6 +69,7 @@ public class FourClique{
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);
 		conf.setFloat("bloom.filter.false.positive.rate", (float)falsePositive);
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		
 		if(enableBF){
 			String bloomFilterFileName = "bloomFilter." + Config.EDGE + "." + falsePositive;
@@ -300,12 +301,21 @@ class FourCliqueStageTwoDriver extends Configured implements Tool{
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		//JobConf job = new JobConf(getConf(), this.getClass());
 		
-		job.setReducerClass(FourCliqueStageTwoReducer.class);
+		boolean isCountOnly = conf.getBoolean("count.only", false);
+		System.out.println(isCountOnly);
 		
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(HVArray.class);
+		
+		if(!isCountOnly) {
+			job.setReducerClass(FourCliqueStageTwoReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else {
+			job.setReducerClass(FourCliqueStageTwoCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
 		
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -428,6 +438,28 @@ class FourCliqueStageTwoReducer
 				context.write(NullWritable.get(), new HVArray(array));
 			}
 		}
+	}
+}
+
+
+class FourCliqueStageTwoCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				continue;
+			} else {
+				++count;
+			}
+		}
+		if(count != 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 }
 

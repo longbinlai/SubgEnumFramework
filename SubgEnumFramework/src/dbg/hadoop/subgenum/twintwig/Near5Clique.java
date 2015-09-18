@@ -258,7 +258,8 @@ private static TLongHashSet triSet = null;
 				}
 			}
 		}
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count != 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 	
 	@Override

@@ -84,6 +84,7 @@ public class ChordalSquare{
 		String[] opts = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new ChordalSquareStageOneDriver(), opts);
 		
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String[] opts2 = { workDir + Config.preparedFileDir, stageOneOutput, stageTwoOutput, numReducers, jarFile };
 		ToolRunner.run(conf, new ChordalSquareStageTwoDriver(), opts2);
 
@@ -137,30 +138,6 @@ class ChordalSquareStageOneMapper extends
 	private static BloomFilterOpr bloomfilterOpr = null;
 	private static boolean enableBF;
 
-	/*
-	@Override
-	public void map(LongWritable key, HyperVertexAdjList value, Context context)
-			throws IOException, InterruptedException {
-		long cur = key.get();
-		long[] largerThanCur = value.getLargeDegreeVertices();
-		long[] smallerThanCur = value.getSmallDegreeVerticesGroup1();
-		long[] fullNeighbors = new long[largerThanCur.length + smallerThanCur.length];
-		System.arraycopy(smallerThanCur, 0, fullNeighbors, 0, smallerThanCur.length);
-		System.arraycopy(largerThanCur, 0, fullNeighbors, smallerThanCur.length, largerThanCur.length);
-		boolean isOutput = true;
-		for(int i = 0; i < fullNeighbors.length - 1; ++i){
-			for(int j = i + 1; j < fullNeighbors.length; ++j){
-				if(enableBF){
-					isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(fullNeighbors[i]), 
-							HyperVertex.VertexID(fullNeighbors[j]));
-				}
-				if(isOutput){
-					context.write(new HVArray(fullNeighbors[i], fullNeighbors[j]), key);
-				}
-			}
-		}
-	}*/
-	
 	@Override
 	public void map(LongWritable _key, HyperVertexAdjList _value,
 			Context context) throws IOException, InterruptedException {
@@ -308,12 +285,20 @@ class ChordalSquareStageTwoDriver extends Configured implements Tool{
 	    		SequenceFileInputFormat.class, ChordalSquareStageTwoMapper.class);
 
 	    //job.setMapperClass(SquareMapper.class);			
-		job.setReducerClass(ChordalSquareStageTwoReducer.class);
+		boolean isCountOnly = conf.getBoolean("count.only", false);
 
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(HVArray.class);
+		
+		if(!isCountOnly) {
+ 			job.setReducerClass(ChordalSquareStageTwoReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else {
+			job.setReducerClass(ChordalSquareStageTwoCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
 
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -363,6 +348,25 @@ class ChordalSquareStageTwoReducer extends
 					value.getSecond(), _key.vertexArray.getSecond() };
 			context.write(NullWritable.get(), new HVArray(array));
 		}
+	}
+}
+
+class ChordalSquareStageTwoCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				continue;
+			}
+			++count;
+		}
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 }
 

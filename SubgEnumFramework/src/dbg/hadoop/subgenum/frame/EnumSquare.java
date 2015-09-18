@@ -70,14 +70,27 @@ public class EnumSquare {
 		
 		String[] opts = { workDir + "adjList2." + maxSize, "",
 				workDir + "frame.square.res",  inputInfo.numReducers, inputInfo.jarFile };
-		ToolRunner.run(conf, new GeneralDriver("Frame Square", 
-						EnumSquareMapper.class, 
-						EnumSquareReducer.class, 
-						HVArray.class, HVArray.class, //OutputKV
-						HVArray.class, LongWritable.class, //MapOutputKV
-						SequenceFileInputFormat.class, 
-						SequenceFileOutputFormat.class,
-						HVArrayComparator.class), opts);	
+		if (!inputInfo.isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver("Frame Square",
+					EnumSquareMapper.class, EnumSquareReducer.class,
+					HVArray.class,
+					HVArray.class, // OutputKV
+					HVArray.class,
+					LongWritable.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class, HVArrayComparator.class),
+					opts);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver("Frame Square",
+					EnumSquareMapper.class, EnumSquareCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArray.class,
+					LongWritable.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class, HVArrayComparator.class),
+					opts);
+		}
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
@@ -85,8 +98,14 @@ public class EnumSquare {
 			String[] opts2 = { inputInfo.workDir + "frame.square.res",
 					inputInfo.workDir + "frame.square.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts2);
+			}
+			else {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					SquareCountMapper.class), opts2);
+			}
 		}
 	}
 	
@@ -222,11 +241,14 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 			// Read the invalid nodes
 			if (invalidNodeSet == null) {
 				invalidNodeSet = new TLongHashSet();
+				NullWritable key = NullWritable.get();
+				LongWritable val = null;
 				for (int i = 0; i < paths.length; ++i) {
 					if (paths[i].toString().contains("part-r-")) {
 						SequenceFile.Reader reader = new SequenceFile.Reader(fs, paths[i], conf);
-						NullWritable key = null;
-						LongWritable val = null;
+						val = (LongWritable) reader.getValueClass()
+								.newInstance();
+						
 						while (reader.next(key, val)) {
 							invalidNodeSet.add(val.get());
 						}
@@ -235,6 +257,12 @@ class EnumSquareMapper extends Mapper<LongWritable, HyperVertexAdjList, HVArray,
 				}
 			}
 		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
@@ -267,6 +295,38 @@ class EnumSquareReducer extends	Reducer<HVArray,LongWritable, HVArray, HVArray> 
 	}
 }
 
+class EnumSquareCountReducer extends
+		Reducer<HVArray, LongWritable, NullWritable, LongWritable> {
+	private static TLongArrayList list = null;
+
+	@Override
+	public void reduce(HVArray _key, Iterable<LongWritable> values,
+			Context context) throws IOException, InterruptedException {
+		list.clear();
+		for (LongWritable val : values) {
+			list.add(val.get());
+		}
+		list.sort();
+		long[] array = list.toArray();
+		long count = 0L;
+		int largeThanMinIndex = BinarySearch.findLargeIndex(_key.getFirst(), array);
+		count = (2 * list.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+	@Override
+	public void setup(Context context) {
+		list = new TLongArrayList();
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		list.clear();
+		list = null;
+	}
+}
+
 class SquareCountMapper extends
 		Mapper<HVArray, HVArray, NullWritable, LongWritable> {
 	@Override
@@ -275,7 +335,8 @@ class SquareCountMapper extends
 		long count = 0L;
 		int largeThanMinIndex = BinarySearch.findLargeIndex(_key.getFirst(), _value.toArrays());
 		count = (2 * _value.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
-		context.write(NullWritable.get(), new LongWritable(count));
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
 	}
 }
 

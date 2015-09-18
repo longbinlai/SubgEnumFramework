@@ -70,7 +70,7 @@ public class Square{
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri()
 				.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
-		
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String[] opts = { workDir + Config.adjListDir + "." + maxSize, outputDir, numReducers, jarFile };
 		ToolRunner.run(conf, new SquareDriver(), opts);
 
@@ -95,13 +95,21 @@ class SquareDriver extends Configured implements Tool{
 	    MultipleInputs.addInputPath(job, new Path(args[0]), 
 	    		SequenceFileInputFormat.class, SquareMapper.class);
 
-	    //job.setMapperClass(SquareMapper.class);			
-		job.setReducerClass(SquareReducer.class);
+	    //job.setMapperClass(SquareMapper.class);
+	    boolean isCountOnly = conf.getBoolean("count.only", false);
 
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
-		job.setOutputValueClass(HVArray.class);
+		
+		if(!isCountOnly) {
+			job.setReducerClass(SquareReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else {
+			job.setReducerClass(SquareCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
 
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -215,5 +223,31 @@ class SquareReducer
 		ttOneList = null;
 	}
 }
+
+class SquareCountReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		long count = 0L;
+		int ttOneSize = 0;
+
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				++ttOneSize;
+			} else {
+				count += ttOneSize;
+			}
+		}
+		count += ttOneSize * (ttOneSize - 1) / 2;
+		if(count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+}
+
 
 

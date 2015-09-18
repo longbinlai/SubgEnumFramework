@@ -30,11 +30,13 @@ public class EnumHouse {
 	public static void run(InputInfo inputInfo) throws Exception {
 		String workDir = inputInfo.workDir;
 		Configuration conf = new Configuration();
-
+		boolean isCountOnly = inputInfo.isCountOnly;
 		// Enumerate Square
 		if(!inputInfo.isSquareSkip){
+			inputInfo.isCountOnly = false;
 			EnumSquare.run(inputInfo);
 		}
+		inputInfo.isCountOnly = isCountOnly;
 		
 		// Partition the square
 		conf.setBoolean("enum.house.square.partition", inputInfo.isSquarePartition);
@@ -49,17 +51,37 @@ public class EnumHouse {
 		if(inputInfo.isSquarePartition){
 			opts2[1] = workDir + "frame.square.res.part";
 		}
-		ToolRunner.run(conf, new GeneralDriver("Frame House", 
-				EnumHouseTriangleMapper.class,
-				EnumHouseSquareMapper.class,
-				EnumHouseReducer.class, 
-				HVArray.class, HVArray.class, //OutputKV
-				HVArraySign.class, HVArray.class, //MapOutputKV
-				SequenceFileInputFormat.class, 
-				SequenceFileInputFormat.class, 
-				SequenceFileOutputFormat.class,
-				HVArraySignComparator.class, 
-				HVArrayGroupComparator.class), opts2);
+		if (!isCountOnly) {
+			ToolRunner.run(conf, new GeneralDriver(
+					"Frame House",
+					EnumHouseTriangleMapper.class,
+					EnumHouseSquareMapper.class,
+					EnumHouseReducer.class,
+					HVArray.class,
+					HVArray.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts2);
+		} else {
+			ToolRunner.run(conf, new GeneralDriver(
+					"Frame House",
+					EnumHouseTriangleMapper.class,
+					EnumHouseSquareMapper.class,
+					EnumHouseCountReducer.class,
+					NullWritable.class,
+					LongWritable.class, // OutputKV
+					HVArraySign.class,
+					HVArray.class, // MapOutputKV
+					SequenceFileInputFormat.class,
+					SequenceFileInputFormat.class,
+					SequenceFileOutputFormat.class,
+					HVArraySignComparator.class, HVArrayGroupComparator.class),
+					opts2);
+		}
 
 	}
 	
@@ -68,8 +90,14 @@ public class EnumHouse {
 			String[] opts3 = { inputInfo.workDir + "frame.house.res",
 					inputInfo.workDir + "frame.house.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+			if(inputInfo.isCountOnly) {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
+						GeneralPatternCountIdentityMapper.class), opts3);
+			}
+			else {
+				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 					HouseCountMapper.class), opts3);
+			}
 		}
 	}
 }
@@ -344,6 +372,57 @@ class EnumHouseReducer extends
 		//triangleList = null;
 		resList.clear();
 		resList = null;
+	}
+}
+
+class EnumHouseCountReducer extends Reducer<HVArraySign, HVArray, 
+	NullWritable, LongWritable> {
+
+	private static TLongHashSet triSet = null;
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> _values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+		triSet.clear();
+		long count = 0L;
+		int tmpSize = 0;
+
+		for (HVArray value : _values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				triSet.add(value.getFirst());
+			} else {
+				long[] array = value.toArrays();
+				tmpSize = triSet.size();
+				if (triSet.contains(array[0])) {
+					tmpSize -= 1;
+				}
+				for (int j = 1; j < array.length; ++j) {
+					if (triSet.contains(array[j])) {
+						count += (tmpSize - 1);
+					} else {
+						count += tmpSize;
+					}
+				}
+			}
+		}
+
+		if (count > 0)
+			context.write(NullWritable.get(), new LongWritable(count));
+	}
+
+	@Override
+	public void setup(Context context) {
+		// triangleList = new TLongArrayList();
+		triSet = new TLongHashSet();
+	}
+
+	@Override
+	public void cleanup(Context context) {
+		triSet.clear();
+		triSet = null;
 	}
 }
 
