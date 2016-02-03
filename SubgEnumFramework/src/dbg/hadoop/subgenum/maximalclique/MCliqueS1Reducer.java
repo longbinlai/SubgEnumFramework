@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArraySign;
@@ -16,7 +15,7 @@ import dbg.hadoop.subgraphs.utils.Config;
 
 class MCliqueS1Reducer extends
 		Reducer<HVArraySign, LongWritable, HVArray, HVArray> {
-
+	
 	@Override
 	public void reduce(HVArraySign _key, Iterable<LongWritable> values,
 			Context context) throws IOException, InterruptedException {
@@ -31,4 +30,5 @@ class MCliqueS1Reducer extends
 		}
 		context.write(_key.vertexArray, new HVArray(list.toArray()));
 	}
+	
 }

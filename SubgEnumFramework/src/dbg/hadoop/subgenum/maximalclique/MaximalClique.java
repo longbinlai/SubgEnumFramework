@@ -66,10 +66,10 @@ public class MaximalClique{
 		
 		conf.setInt("mapred.clique.size.threshold", cliqueSizeThresh);
 		
-		if (enableBF) {
+		if(enableBF) {
 			String bloomFilterFileName = "bloomFilter." + Config.EDGE + "." + falsePositive;
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/"
-					+ Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
+				+ Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
 		// The parameters: <graphFileDir> <adjListDir> <outputDir> <numReducers> <jarFile>

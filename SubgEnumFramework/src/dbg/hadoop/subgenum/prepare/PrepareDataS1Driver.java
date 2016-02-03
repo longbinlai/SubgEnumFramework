@@ -60,8 +60,8 @@ public class PrepareDataS1Driver extends Configured implements Tool{
 		
 		MultipleInputs.addInputPath(job, 
 				new Path(graphFile),
-				KeyValueTextInputFormat.class,
-				PrepareDataS1Mapper.class);
+				SequenceFileInputFormat.class,
+				PrepareDataS1Mapper2.class);
 		
 		//FileInputFormat.setInputPaths(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[2]));

@@ -179,8 +179,9 @@ class EnumTwinTriangleReducer extends
 class EnumTwinTriangleCountReducer extends
 		Reducer<LongWritable, HVArray, NullWritable, LongWritable> {
 
-	ArrayList<HVArray> heap = null;
-	TLongIntHashMap firstItemMap = null;
+	private static ArrayList<HVArray> heap = null;
+	private static TLongIntHashMap firstItemMap = null;
+	private static boolean isCompress = true; 
 
 	@Override
 	public void reduce(LongWritable _key, Iterable<HVArray> values,
@@ -215,12 +216,28 @@ class EnumTwinTriangleCountReducer extends
 		for (int i = 0; i < array.length; ++i) {
 			v1 = array[i].getFirst();
 			v2 = array[i].getSecond();
-
-			for (int j = firstItemMap.get(v1); j < array.length; ++j) {
-				v3 = array[j].getFirst();
-				v4 = array[j].getSecond();
-				if (v2 != v3 && v2 != v4) {
-					++count;
+			
+			if (!isCompress) {
+				for (int j = firstItemMap.get(v1); j < array.length; ++j) {
+					v3 = array[j].getFirst();
+					v4 = array[j].getSecond();
+					if (v2 != v3 && v2 != v4) {
+						++count;
+					}
+				}
+			}
+			else {
+				int index = firstItemMap.get(v1);
+				while(index < array.length && array[index].getFirst() <= v2){
+					v3 = array[index].getFirst();
+					v4 = array[index].getSecond();
+					if(v3 != v2 && v4 != v2){
+						count += 1;
+					}
+					index += 1;
+				}
+				if(index < array.length) {
+					count += (array.length - index);
 				}
 			}
 		}
@@ -232,6 +249,7 @@ class EnumTwinTriangleCountReducer extends
 	public void setup(Context context) {
 		heap = new ArrayList<HVArray>();
 		firstItemMap = new TLongIntHashMap();
+		isCompress = context.getConfiguration().getBoolean("result.compression", true);
 	}
 
 	@Override

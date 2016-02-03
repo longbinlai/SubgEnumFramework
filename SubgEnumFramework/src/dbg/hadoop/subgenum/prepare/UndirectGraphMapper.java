@@ -24,8 +24,8 @@ public class UndirectGraphMapper extends Mapper<Text, Text, DoubleIntegerPairWri
 			return;
 		}
 		
-		int keyInt = Integer.valueOf(_key.toString());
-		int valueInt = Integer.valueOf(_value.toString());
+		int keyInt = Integer.valueOf(_key.toString().trim());
+		int valueInt = Integer.valueOf(_value.toString().trim());
 		
 		if(keyInt < valueInt){
 			context.write(new DoubleIntegerPairWritable(keyInt, valueInt), NullWritable.get());

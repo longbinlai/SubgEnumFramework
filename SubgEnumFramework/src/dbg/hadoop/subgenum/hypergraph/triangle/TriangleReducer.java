@@ -26,10 +26,11 @@ public class TriangleReducer
 		long v2 = _key.vertexArray.getFirst();
 		long v3 = _key.vertexArray.getSecond();
 		if(v2 == v3){
-			for(HVArray value: values){
+			//for(HVArray value: values){
 				//System.err.println(new HVArray(value.getFirst(), v2, v3));
-				context.write(NullWritable.get(), new HVArray(value.getFirst(), v2, v3));
-			}
+			//	context.write(NullWritable.get(), new HVArray(value.getFirst(), v2, v3));
+			//}
+			return;
 		}
 		else{
 			if(_key.sign != Config.SMALLSIGN){

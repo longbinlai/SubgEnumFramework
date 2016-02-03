@@ -10,6 +10,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;  
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;  
 import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;  
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -29,11 +30,12 @@ public class GenDegreeDriver extends Configured implements Tool{
 		Job job = new Job(conf, "Degree Generation");
 		((JobConf)job.getConfiguration()).setJar(args[3]);
 
-		job.setMapperClass(GenDegreeMapper.class);
+		job.setMapperClass(GenDegreeMapper2.class);
 		job.setReducerClass(GenDegreeReducer.class);
 		job.setCombinerClass(GenDegreeReducer.class);
 		
-		job.setInputFormatClass(KeyValueTextInputFormat.class);
+		//job.setInputFormatClass(KeyValueTextInputFormat.class);
+		job.setInputFormatClass(SequenceFileInputFormat.class);
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
 		
 		job.setOutputKeyClass(IntWritable.class);

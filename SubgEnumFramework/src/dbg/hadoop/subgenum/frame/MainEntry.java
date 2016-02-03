@@ -168,11 +168,30 @@ public class MainEntry{
 			log.info("[Frame-near5clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumNear5Clique.countOnce(inputInfo);
 		}
+		else if (query.compareTo("tcsquare") == 0 || query.compareTo("q8") == 0) {
+			Utility.getFS().delete(new Path(workDir + "frame.tcsquare.res.1"));
+			Utility.getFS().delete(new Path(workDir + "frame.tcsquare.res.2"));
+			Utility.getFS().delete(new Path(workDir + "frame.tcsquare.res"));
+			Utility.getFS().delete(new Path(workDir + "frame.tcsquare.cnt"));
+			log.info("Start enumerating twin chordal square...");
+			startTime = System.currentTimeMillis();
+			
+			System.out.println(inputInfo.isLeftDeep);
+			
+			if(!inputInfo.isLeftDeep)
+				EnumTwinCSquare.run(inputInfo);
+			else 
+				EnumTwinCSquareLD.run(inputInfo);
+			
+			endTime=System.currentTimeMillis();
+			log.info("[Frame-tcsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			EnumTwinCSquare.countOnce(inputInfo);
+		}
 		else {
 			System.err.println("Please specify enum.query=[...];");
 			System.err.println("Supported queries are: square, " +
 					"chordalsquare, clique, house, solarsquare, " +
-					"twintriangle, near5clique;");
+					"twintriangle, near5clique, tcsquare;");
 			System.exit(0);
 		}
 	}

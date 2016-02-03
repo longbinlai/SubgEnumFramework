@@ -207,8 +207,8 @@ public class GeneralDriver extends Configured implements Tool{
 		}
 
 		job.setOutputFormatClass(outputFormatClass);
-		//SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
-		//SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
+		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
+		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
 		
 		if(mapOutputKeyClass != null)
 			job.setMapOutputKeyClass(mapOutputKeyClass);

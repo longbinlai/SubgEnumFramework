@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.hash.TLongHashSet;
 
@@ -258,7 +259,7 @@ class HouseStageTwoReducer extends
 
 class HouseStageTwoCountReducer extends
 		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
-	private static TLongHashSet triSet = null;
+	private static TLongArrayList ttList = null;
 
 	@Override
 	public void reduce(HVArraySign _key, Iterable<HVArray> values,
@@ -267,20 +268,20 @@ class HouseStageTwoCountReducer extends
 			return;
 		}
 		long count = 0L;
-		triSet.clear();
-		long v3, v4;
+		ttList.clear();
+		long v1, v3, v4;
 		for (HVArray value : values) {
 			if (_key.sign == Config.SMALLSIGN) {
-				triSet.add(value.getFirst());
+				ttList.add(value.getFirst());
 			} else {
-				v3 = value.getFirst();
-				v4 = value.getSecond();
-				count += triSet.size();
-				if(triSet.contains(v3)) {
-					count -= 1;
-				}
-				if(triSet.contains(v4)) {
-					count -= 1;
+				TLongIterator it = ttList.iterator();
+				while(it.hasNext()) {
+					v1 = it.next();
+					v3 = value.getFirst();
+					v4 = value.getSecond();
+					if(v1 != v3 && v1 != v4){
+						++count;
+					}
 				}
 			}
 		}
@@ -291,13 +292,13 @@ class HouseStageTwoCountReducer extends
 
 	@Override
 	public void setup(Context context) {
-		triSet = new TLongHashSet();
+		ttList = new TLongArrayList();
 	}
 
 	@Override
 	public void cleanup(Context context) {
-		triSet.clear();
-		triSet = null;
+		ttList.clear();
+		ttList = null;
 	}
 }
 

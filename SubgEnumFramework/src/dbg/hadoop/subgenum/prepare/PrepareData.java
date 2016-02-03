@@ -28,17 +28,10 @@ public class PrepareData{
 		int maxSize = inputInfo.maxSize;
 		String dir = inputInfo.workDir;
 		
-		if (dir.toLowerCase().contains("hdfs")) {
-			int pos = dir.substring("hdfs://".length()).indexOf("/")
-					+ "hdfs://".length();
-			Utility.setDefaultFS(dir.substring(0, pos));
-		} else {
-			Utility.setDefaultFS("");
-		}
-		
 		if(Utility.getFS().isDirectory(new Path(dir + Config.undirectGraphDir))){
 			Utility.getFS().delete(new Path(dir + Config.undirectGraphDir));
 		}
+
 		if(Utility.getFS().isDirectory(new Path(dir + Config.degreeFileDir))){
 			Utility.getFS().delete(new Path(dir + Config.degreeFileDir));
 		}
@@ -52,6 +45,7 @@ public class PrepareData{
 		// Initially, turn the graph into its undirected version if necessary
 		// and change the delimiter from anything to tab
 		// The parameters: <inputfile> <outputDir> <numReducers> <seperator> <jarFile>
+		
 		if(!isUndirected){
 			String[] undirectedOpts = {inputFilePath, dir + Config.undirectGraphDir, 
 					numReducers, separator, jarFile};
@@ -59,6 +53,10 @@ public class PrepareData{
 			// change the graph input path to the undirected output path
 			inputFilePath = dir + Config.undirectGraphDir;
 			
+		}
+		
+		if(Utility.getFS().isDirectory(new Path(dir + Config.undirectGraphDir))){
+			inputFilePath = dir + Config.undirectGraphDir;
 		}
 
 		// First, generate the degree
@@ -83,6 +81,7 @@ public class PrepareData{
 		ToolRunner.run(new Configuration(), new PrepareDataS2Driver(), prepareDataOpts);
 		
 		Utility.getFS().delete(new Path(s1OutputDir));
+
 		
 		// Generate adjlist
 		inputInfo.maxSize = 0;
@@ -91,7 +90,7 @@ public class PrepareData{
 		GenAdjList.run(inputInfo);
 		
 		// Generate bloom filter
-		DistinctTwinTwig.run(inputInfo);
+		//DistinctTwinTwig.run(inputInfo);
 		inputInfo.bfType = Config.EDGE;
 		GenBloomFilter.run(inputInfo);
 		//inputInfo.bfType = Config.TWINTWIG1;

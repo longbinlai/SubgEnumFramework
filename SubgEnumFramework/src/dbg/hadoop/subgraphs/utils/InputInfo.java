@@ -13,15 +13,17 @@ public class InputInfo {
 	public String workDir = "";
 	public String cliqueNumVertices = "4";
 	public String query = "square";
+	public String sampleType = "v"; //either vertex or edge
 	public long elemSize = 1L;
 	public int bfType = Config.EDGE;
 	public int maxSize = 0;
 	public int cliqueSizeThresh = 0;
-	public float falsePositive = (float) 0.001;
+	public float falsePositive = 0.001F;
+	public float sampleRate = 0.2F;
 	public boolean isUndirected = false;
 	public boolean enableBF = true;
 	public boolean isHyper = false;
-	public boolean isCountOnly = false;
+	public boolean isCountOnly = true;
 	public boolean isCountPatternOnce = false;
 	public boolean isResultCompression = true;
 	public boolean isSquareSkip = false;
@@ -31,8 +33,11 @@ public class InputInfo {
 	public boolean isChordalSquarePartition = false;
 	// Use new version clique enumeration functions
 	public boolean isEnumCliqueV2 = false;
+	public boolean isLeftDeep = false;
+	public boolean isNonOverlapping = false;
 	public int squarePartitionThresh = 2000;
 	public int chordalSquarePartitionThresh = 2000;
+	public String outputDir = null;
 	
 	public InputInfo(String[] args) throws IOException{
 		int valuePos = 0;
@@ -134,6 +139,19 @@ public class InputInfo {
 					isHyper = Boolean.parseBoolean(args[i].substring(valuePos));
 				}
 			}
+			else if (args[i].contains("is.leftdeep")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isLeftDeep = Boolean.parseBoolean(args[i].substring(valuePos));
+				}
+			}
+			else if (args[i].contains("is.nonoverlapping")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isNonOverlapping = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("is.nonoverlapping: " + isNonOverlapping);
+				}
+			}
 			else if (args[i].contains("count.only")){
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
@@ -220,6 +238,22 @@ public class InputInfo {
 				if (valuePos != 0) {
 					isEnumCliqueV2 = Boolean.parseBoolean(args[i].substring(valuePos));
 					System.out.println("enum.clique.v2: " + isEnumCliqueV2);
+				}
+			}
+			else if (args[i].contains("graph.sample.rate")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					sampleRate = Float.parseFloat(args[i].substring(valuePos));
+					System.out.println("sampleRate: " + sampleRate);
+				}
+			} 
+			else if (args[i].contains("graph.sample.type")) {
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					if(args[i].substring(valuePos).toLowerCase().compareTo("edge") == 0){
+						sampleType = "e";
+					}
+					System.out.println("sampleType: " + sampleType);
 				}
 			}
 		}

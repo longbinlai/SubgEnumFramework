@@ -104,6 +104,17 @@ public class HyperVertex{
 	public static boolean isClique(long vertexDetail) {
 		return ((int) ((vertexDetail >> (NUM_ID_BITS + NUM_DEGREE_BITS)) & BOOLEAN_MASK) == 1);
 	}
+	
+	public static long setClique(long hyper, boolean isClique){
+		long res = hyper;
+		if(isClique){
+			res |= (1L << NUM_DEGREE_BITS + NUM_ID_BITS);
+		}
+		else{
+			res &= (0L << NUM_DEGREE_BITS + NUM_ID_BITS);
+		}
+		return res;
+	}
 
 	public static int Size(long vertexDetail) {
 		return (int) ((vertexDetail >> (NUM_ID_BITS + NUM_DEGREE_BITS + 1)) & SIZE_MASK);

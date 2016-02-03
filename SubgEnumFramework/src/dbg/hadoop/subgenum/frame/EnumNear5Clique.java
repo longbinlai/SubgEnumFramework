@@ -410,16 +410,16 @@ class EnumNear5CliqueCountReducer extends
 		if (_key.sign != Config.SMALLSIGN) {
 			return;
 		}
-		// System.out.println(isCompress);
 		long count = 0L;
 
 		triSet.clear();
-		long v3 = 0, v4 = 0;
+		long v1 = 0, v3 = 0, v4 = 0;
 		for (HVArray value : _values) {
 			if (_key.sign == Config.SMALLSIGN) {
 				triSet.add(value.getFirst());
 			} else {
-				if (value.size() > 2) {
+				// If value.size() > 2, it is not possible to be not compressed
+				if (value.size() > 2) { 
 					long[] cliqueArray = value.toArrays();
 					for (int j = 0; j < cliqueArray.length - 1; ++j) {
 						for (int k = j + 1; k < cliqueArray.length; ++k) {
@@ -430,19 +430,30 @@ class EnumNear5CliqueCountReducer extends
 							if (triSet.contains(cliqueArray[k])) {
 								count -= 1;
 							}
-							// System.out.println("count = " + count);
 						}
 					}
 
 				} else {
-					v3 = value.getFirst();
-					v4 = value.getSecond();
-					count += triSet.size();
-					if (triSet.contains(v3)) {
-						count -= 1;
-					}
-					if (triSet.contains(v4)) {
-						count -= 1;
+					if (isCompress) {
+						v3 = value.getFirst();
+						v4 = value.getSecond();
+						count += triSet.size();
+						if (triSet.contains(v3)) {
+							count -= 1;
+						}
+						if (triSet.contains(v4)) {
+							count -= 1;
+						}
+					} else { // If not compress, touch every results instead
+						TLongIterator iter = triSet.iterator();
+						while(iter.hasNext()) {
+							v1 = iter.next();
+							v3 = value.getFirst();
+							v4 = value.getSecond();
+							if(v1 != v3 && v1 != v4) {
+								count += 1;
+							}
+						}
 					}
 				}
 			}

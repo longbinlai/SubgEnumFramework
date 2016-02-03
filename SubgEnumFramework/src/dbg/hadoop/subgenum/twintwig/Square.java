@@ -177,7 +177,9 @@ class SquareMapper extends
 
 class SquareReducer
 	extends Reducer<HVArraySign, HVArray, NullWritable, HVArray> {
+	
 	private static TLongArrayList ttOneList = null;
+	
 	public void reduce(HVArraySign _key, Iterable<HVArray> values,
 			Context context) throws IOException, InterruptedException {	
 		if(_key.sign != Config.SMALLSIGN){
@@ -226,25 +228,44 @@ class SquareReducer
 
 class SquareCountReducer extends
 		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
+	
+	private static TLongArrayList ttOneList = null;
 
 	public void reduce(HVArraySign _key, Iterable<HVArray> values,
 			Context context) throws IOException, InterruptedException {
 		if (_key.sign != Config.SMALLSIGN) {
 			return;
 		}
+		ttOneList.clear();
 		long count = 0L;
-		int ttOneSize = 0;
 
 		for (HVArray value : values) {
 			if (_key.sign == Config.SMALLSIGN) {
-				++ttOneSize;
+				ttOneList.add(value.getFirst());
 			} else {
-				count += ttOneSize;
+				count += ttOneList.size();
 			}
 		}
-		count += ttOneSize * (ttOneSize - 1) / 2;
-		if(count > 0)
+
+		for(int i = 0; i < ttOneList.size() - 1; ++i){
+			for(int j = i + 1; j < ttOneList.size(); ++j){
+				++count;
+			}
+		}
+		if(count > 0) {
 			context.write(NullWritable.get(), new LongWritable(count));
+		}
+	}
+	
+	@Override
+	public void setup(Context context){
+		ttOneList = new TLongArrayList();
+	}
+	
+	@Override
+	public void cleanup(Context context){
+		ttOneList.clear();
+		ttOneList = null;
 	}
 
 }

@@ -229,7 +229,8 @@ class Near5CliqueReducer extends
 
 class Near5CliqueCountReducer extends
 	Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
-private static TLongHashSet triSet = null;
+	
+	private static TLongArrayList ttList = null;
 	
 	@Override
 	public void reduce(HVArraySign _key, Iterable<HVArray> values,
@@ -237,39 +238,40 @@ private static TLongHashSet triSet = null;
 		if(_key.sign != Config.SMALLSIGN){
 			return;
 		}
-		triSet.clear();
+		ttList.clear();
 		long count = 0L;
-		long v3 = 0, v4 = 0;
+		long v1 = 0, v3 = 0, v4 = 0;
 		//long v2 = _key.vertexArray.getFirst();
 		//long v5 = _key.vertexArray.getSecond();
 		for(HVArray value : values){
 			if(_key.sign == Config.SMALLSIGN)
 				//ttList.add(value.getFirst());
-				triSet.add(value.getFirst());
+				ttList.add(value.getFirst());
 			else {
-				count += triSet.size();
-				v3 = value.getFirst();
-				v4 = value.getSecond();
-				if(triSet.contains(v3)) {
-					count -= 1;
-				}
-				if(triSet.contains(v4)) {
-					count -= 1;
+				TLongIterator iter = ttList.iterator();
+				while(iter.hasNext()){
+					v1 = iter.next();
+					v3 = value.getFirst();
+					v4 = value.getSecond();
+					if(v1 != v3 && v1 != v4){
+						++count;
+					}
 				}
 			}
 		}
-		if(count != 0)
+		if(count != 0) {
 			context.write(NullWritable.get(), new LongWritable(count));
+		}
 	}
 	
 	@Override
 	public void setup(Context context){
-		triSet = new TLongHashSet();
+		ttList = new TLongArrayList();
 	}
 	
 	@Override
 	public void cleanup(Context context){
-		triSet.clear();
-		triSet = null;
+		ttList.clear();
+		ttList = null;
 	}
 }

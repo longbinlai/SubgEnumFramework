@@ -20,7 +20,7 @@ public class Triangle{
 	public static void run(InputInfo inputInfo) throws Exception{
 		String inputFilePath = inputInfo.inputFilePath;
 		float falsePositive = inputInfo.falsePositive;
-		boolean enableBF = inputInfo.enableBF;
+		boolean enableBF = true;
 		boolean isHyper = inputInfo.isHyper;
 		int maxSize = inputInfo.maxSize;
 		

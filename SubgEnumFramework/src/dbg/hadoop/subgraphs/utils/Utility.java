@@ -5,8 +5,11 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
+
+import com.google.inject.Key;
 
 import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.IntegerPairWritable;
@@ -23,12 +26,15 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class Utility{
 	private static String defaultFS = "";
@@ -446,6 +452,55 @@ public class Utility{
 			arrayPartitioner.add(Arrays.copyOfRange(array, from, to));
 		}
 		return arrayPartitioner;
+	}
+	
+	/**
+	 * Sampling the vertex
+	 * @param sampleRate sample rate
+	 * @param samplePath the path to install the sample vertices
+	 * @throws IOException 
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
+	 */
+	public static void sampleVertex(float sampleRate, String sampleDir, String workDir) 
+			throws IOException, InstantiationException, IllegalAccessException{
+		Path degreePath = new Path(workDir + Config.degreeFileDir);
+		Path samplePath = new Path(workDir + sampleDir);
+		if(!fs.exists(degreePath)) {
+			System.err.println("No degree file exist...");
+			return;
+		}
+		int sampleValue = (int)(100 * sampleRate);
+		Random rand = new Random(System.currentTimeMillis());
+		FileStatus[] status = fs.listStatus(degreePath);
+		if (fs.exists(samplePath)) {
+			fs.delete(samplePath, true);
+		}
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+				fs.create(samplePath)));
+		
+		IntWritable key = null;
+		IntWritable val = null;
+		for(int i = 0; i < status.length; ++i){
+			String p = status[i].getPath().toString();
+			if (p.contains("part-") & !p.contains(".crc")) {
+
+				SequenceFile.Reader reader = new SequenceFile.Reader(fs, status[i].getPath(), 
+						new Configuration());
+				key = (IntWritable) reader.getKeyClass()
+						.newInstance();
+				val = (IntWritable) reader.getValueClass()
+						.newInstance();
+				
+				while (reader.next(key, val)) {
+					if(rand.nextInt(100) < sampleValue){
+						writer.write(key.get() + "\n");
+					}
+				}
+				reader.close();
+			}
+		}
+		writer.close();
 	}
 	
 }

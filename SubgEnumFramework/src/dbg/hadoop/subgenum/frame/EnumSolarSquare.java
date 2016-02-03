@@ -233,6 +233,7 @@ class EnumSolarSquareReducer extends
 class EnumSolarSquareCountReducer extends
 		Reducer<HVArray, LongWritable, NullWritable, LongWritable> {
 	
+	private boolean isCompress = true;
 	private TLongArrayList heap = null;
 
 	@Override
@@ -243,12 +244,22 @@ class EnumSolarSquareCountReducer extends
 			heap.add(val.get());
 		}
 		heap.sort();
+		
 		long count = 0L;
 		long[] array = heap.toArray();
-
+		
 		int largeThanMinIndex = BinarySearch.findLargeIndex(
 					_key.getSecond(), array);
-		count = (2 * heap.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
+		if(isCompress) {
+			count = (2 * heap.size() - 1 - largeThanMinIndex) * largeThanMinIndex / 2;
+		} 
+		else { // Not compressed, touch every result once
+			for (int i = 0; i < largeThanMinIndex; ++i) {
+				for (int j = i + 1; j < array.length; ++j) {
+					count += 1;
+				}
+			}
+		}
 		if(count > 0)
 			context.write(NullWritable.get(), new LongWritable(count));
 	}
@@ -256,6 +267,7 @@ class EnumSolarSquareCountReducer extends
 	@Override
 	public void setup(Context context) {
 		heap = new TLongArrayList();
+		isCompress = context.getConfiguration().getBoolean("result.compression", true);
 	}
 }
 

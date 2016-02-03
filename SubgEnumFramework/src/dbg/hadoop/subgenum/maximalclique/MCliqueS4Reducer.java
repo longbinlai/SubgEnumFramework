@@ -31,8 +31,6 @@ public class MCliqueS4Reducer
 				(HyperVertex.VertexID(heap.getFirst()), true, 
 						size, HyperVertex.Degree(heap.getFirst())));
 			context.write(outputKey, new HVArray(heap.toArrays()));
-			//System.out.println(HyperVertex.toString(outputKey.get()));
-			//System.out.println(HyperVertex.toString(outputKey.get()) + "\t" + new HVArray(heap.toArrays()));
 		}
 		heap.clear();
 	}

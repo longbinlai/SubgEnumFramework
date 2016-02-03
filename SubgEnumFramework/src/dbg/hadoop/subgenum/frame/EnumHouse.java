@@ -11,6 +11,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
@@ -19,6 +20,7 @@ import dbg.hadoop.subgraphs.io.HVArray;
 import dbg.hadoop.subgraphs.io.HVArrayGroupComparator;
 import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.HVArraySignComparator;
+import dbg.hadoop.subgraphs.io.HyperVertexAdjList;
 import dbg.hadoop.subgraphs.utils.BinarySearch;
 import dbg.hadoop.subgraphs.utils.BloomFilterOpr;
 import dbg.hadoop.subgraphs.utils.Config;
@@ -48,28 +50,49 @@ public class EnumHouse {
 		// Enumerate House
 		String[] opts2 = { workDir + "triangle.res", workDir + "frame.square.res",	
 				workDir + "frame.house.res", inputInfo.numReducers, inputInfo.jarFile };
+		
 		if(inputInfo.isSquarePartition){
 			opts2[1] = workDir + "frame.square.res.part";
 		}
-		if (!isCountOnly) {
+		
+		if (!inputInfo.isNonOverlapping) {
+			if (!isCountOnly) {
+				ToolRunner.run(conf, new GeneralDriver(
+						"Frame House",
+						EnumHouseTriangleMapper.class,
+						EnumHouseSquareMapper.class,
+						EnumHouseReducer.class,
+						HVArray.class,
+						HVArray.class, // OutputKV
+						HVArraySign.class,
+						HVArray.class, // MapOutputKV
+						SequenceFileInputFormat.class,
+						SequenceFileInputFormat.class,
+						SequenceFileOutputFormat.class,
+						HVArraySignComparator.class,
+						HVArrayGroupComparator.class), opts2);
+			} else {
+				ToolRunner.run(conf, new GeneralDriver(
+						"Frame House",
+						EnumHouseTriangleMapper.class,
+						EnumHouseSquareMapper.class,
+						EnumHouseCountReducer.class,
+						NullWritable.class,
+						LongWritable.class, // OutputKV
+						HVArraySign.class,
+						HVArray.class, // MapOutputKV
+						SequenceFileInputFormat.class,
+						SequenceFileInputFormat.class,
+						SequenceFileOutputFormat.class,
+						HVArraySignComparator.class,
+						HVArrayGroupComparator.class), opts2);
+			}
+		}
+		else{ // The non-overlapping case, using twintwig instead of triangle
+			opts2[0] = workDir + Config.adjListDir + "." + inputInfo.maxSize;
 			ToolRunner.run(conf, new GeneralDriver(
 					"Frame House",
-					EnumHouseTriangleMapper.class,
-					EnumHouseSquareMapper.class,
-					EnumHouseReducer.class,
-					HVArray.class,
-					HVArray.class, // OutputKV
-					HVArraySign.class,
-					HVArray.class, // MapOutputKV
-					SequenceFileInputFormat.class,
-					SequenceFileInputFormat.class,
-					SequenceFileOutputFormat.class,
-					HVArraySignComparator.class, HVArrayGroupComparator.class),
-					opts2);
-		} else {
-			ToolRunner.run(conf, new GeneralDriver(
-					"Frame House",
-					EnumHouseTriangleMapper.class,
+					EnumHouseTTMapper.class,
 					EnumHouseSquareMapper.class,
 					EnumHouseCountReducer.class,
 					NullWritable.class,
@@ -79,10 +102,9 @@ public class EnumHouse {
 					SequenceFileInputFormat.class,
 					SequenceFileInputFormat.class,
 					SequenceFileOutputFormat.class,
-					HVArraySignComparator.class, HVArrayGroupComparator.class),
-					opts2);
+					HVArraySignComparator.class,
+					HVArrayGroupComparator.class), opts2);
 		}
-
 	}
 	
 	public static void countOnce(InputInfo inputInfo) throws Exception{
@@ -90,7 +112,7 @@ public class EnumHouse {
 			String[] opts3 = { inputInfo.workDir + "frame.house.res",
 					inputInfo.workDir + "frame.house.cnt",
 					inputInfo.numReducers, inputInfo.jarFile };
-			if(inputInfo.isCountOnly) {
+			if(inputInfo.isCountOnly || inputInfo.isNonOverlapping) {
 				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 						GeneralPatternCountIdentityMapper.class), opts3);
 			}
@@ -116,6 +138,62 @@ class EnumHouseTriangleMapper extends
 					new HVArray(_value.getLast()));
 	}
 }
+
+/**
+ * A mapper handling twintwig part
+ * @author robeen
+ *
+ */
+class EnumHouseTTMapper extends
+	Mapper<LongWritable, HyperVertexAdjList, HVArraySign, HVArray> {
+
+
+	@Override
+	public void map(LongWritable _key, HyperVertexAdjList _value,
+			Context context) throws IOException, InterruptedException {
+		
+		long[] largerThanThis = _value.getLargeDegreeVertices();
+		long[] smallerThanThisG0 = _value.getSmallDegreeVerticesGroup0();
+		long[] smallerThanThisG1 = _value.getSmallDegreeVerticesGroup1();
+		HVArray outputVal = new HVArray(_key.get());
+
+
+		if (_value.isFirstAdd()) {
+			// Generate TwinTwig 1
+			for (int i = 0; i < largerThanThis.length - 1; ++i) {
+				for (int j = i + 1; j < largerThanThis.length; ++j) {
+					context.write(new HVArraySign(largerThanThis[i],
+							largerThanThis[j], Config.SMALLSIGN), outputVal);
+				}
+			}
+		}
+		
+		if (smallerThanThisG0.length == 0) {
+			for (int i = 0; i < smallerThanThisG1.length; ++i) {
+				// Generate TwinTwig 3
+				for (int k = i + 1; k < smallerThanThisG1.length; ++k) {
+					context.write(new HVArraySign(smallerThanThisG1[i],
+								smallerThanThisG1[k], Config.SMALLSIGN), outputVal);
+				}
+				// Generate TwinTwig 2
+				for (int j = 0; j < largerThanThis.length; ++j) {
+					context.write(new HVArraySign(smallerThanThisG1[i],
+								largerThanThis[j], Config.SMALLSIGN), outputVal);
+				}
+			}
+		}
+
+		else {
+			for (int i = 0; i < smallerThanThisG0.length; ++i) {
+				for (int j = 0; j < smallerThanThisG1.length; ++j) {
+					context.write(new HVArraySign(smallerThanThisG0[i],
+							smallerThanThisG1[j], Config.SMALLSIGN), outputVal);
+				}
+			}
+		}
+	}
+}
+
 
 class EnumHouseSquareMapper extends
 		Mapper<HVArray, HVArray, HVArraySign, HVArray> {

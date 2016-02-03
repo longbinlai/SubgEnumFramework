@@ -2,6 +2,7 @@ package dbg.hadoop.subgraphs.utils;
 
 import gnu.trove.iterator.TLongIterator;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.hash.TIntLongHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
@@ -17,10 +18,10 @@ import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 public class Graph{
-	private static Logger log = Logger.getLogger(Graph.class);
+	//private static Logger log = Logger.getLogger(Graph.class);
 	private long unorientedSize=0;
 	private long orientedSize=0;
 	//private TLongLongHashMap cliqueMap = null;
@@ -255,7 +256,7 @@ public class Graph{
 							} else {
 								countRunning += 1;
 								if (countRunning > 1 && countRunning % 1000000 == 1) {
-									log.info("Current clique count: " + countRunning);
+									//log.info("Current clique count: " + countRunning);
 								}
 								for (int i = 1; i < cliqueSize; ++i) {
 									curClique[i] = neighbors.get(indexes[i - 1]);
@@ -757,6 +758,104 @@ public class Graph{
 			}
 		}
 		this.cliqueSet.clear();
+	}
+	
+	/**
+	 * Generate hyper graph
+	 */
+	public void genHyperGraph() {
+		TLongHashSet alreadyVisitSet = new TLongHashSet();
+		TLongIntHashMap hyperVertexMap = new TLongIntHashMap();
+		TLongIterator iter = this.getNodeList().iterator();
+		TLongIterator iterNeigh, iterNeigh2;
+		long currentHyper = 0;
+		int numHyperVertices = 0, numHyperEdges = 0;
+		while(iter.hasNext()){
+			long v = iter.next();
+			if(!alreadyVisitSet.contains(v)){
+				alreadyVisitSet.add(v);
+				// Creat a hypervertex is isclique = false
+				currentHyper = HyperVertex.get(HyperVertex.VertexID(v), false, 0, 0);
+				//System.out.println("Gen a new hyper vertex: " + HyperVertex.VertexID(v));
+				++numHyperVertices;
+				hyperVertexMap.put(v, HyperVertex.VertexID(currentHyper));
+				iterNeigh = this.getAdjList(v).iterator();
+				while(iterNeigh.hasNext()){
+					long v1 = iterNeigh.next();
+					if(this.isEquivalent(v, v1)){
+						currentHyper = HyperVertex.setClique(currentHyper, true);
+						hyperVertexMap.put(v1, HyperVertex.VertexID(currentHyper));
+						alreadyVisitSet.add(v1);
+					}
+				}
+				if(!HyperVertex.isClique(currentHyper)){
+					iterNeigh = this.getAdjList(v).iterator();
+					while(iterNeigh.hasNext()){
+						long v1 = iterNeigh.next();
+						iterNeigh2 = this.getAdjList(v1).iterator();
+						while(iterNeigh2.hasNext()){
+							long v2 = iterNeigh2.next();
+							if(v == v2){
+								continue;
+							}
+							if(this.isEquivalent(v, v2)){
+								hyperVertexMap.put(v2, HyperVertex.VertexID(currentHyper));
+								alreadyVisitSet.add(v2);
+							}
+						}
+					}
+				}
+			}
+		}
+		alreadyVisitSet.clear();
+		iter = this.getNodeList().iterator();
+		while(iter.hasNext()){
+			long v = iter.next();
+			iterNeigh = this.getAdjList(v).iterator();
+			while(iterNeigh.hasNext()){
+				long v1 = iterNeigh.next();
+				if(v < v1){
+					if(hyperVertexMap.get(v) != hyperVertexMap.get(v1)){
+						++numHyperEdges;
+					}
+				}
+			}
+		}
+		System.out.println("# of hyper vertices: " + numHyperVertices);
+		System.out.println("# of hyper edges: " + numHyperEdges);
+		hyperVertexMap.clear();
+	}
+	
+	/**
+	 * Verify whether two nodes are equivalent
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
+	public boolean isEquivalent(long v1, long v2){
+		boolean res = false;
+		if(this.getNodeDegree(v1) == 0 || this.getNodeDegree(v2) == 0 ||
+				this.getNodeDegree(v1) != this.getNodeDegree(v2)){
+			return res;
+		}
+		int count = 0;
+		TLongIterator iter = this.getAdjList(v2).iterator();
+		while(iter.hasNext()){
+			long v3 = iter.next();
+			if(v3 == v1){
+				++count;
+			}
+			else{
+				if(!this.hasNeighbor(v1, v3)){
+					return res;
+				}
+				++count;
+			}
+		}
+		if(count == this.getNodeDegree(v1)){
+			res = true;
+		}
+		return res;
 	}
 	
 	public void clear() {
