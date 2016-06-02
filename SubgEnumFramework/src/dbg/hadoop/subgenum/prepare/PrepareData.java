@@ -18,16 +18,18 @@ public class PrepareData{
 	@SuppressWarnings("deprecation")
 	public static void main(String[] args) throws Exception{
 		inputInfo = new InputInfo(args);
-
+		int maxSize = inputInfo.maxSize;
+		
+		
 		String numReducers = inputInfo.numReducers;
 		String inputFilePath = inputInfo.inputFilePath;
 		String jarFile = inputInfo.jarFile;
 		// default as tab, alternative choices are: space, comma, semicolon
 		String separator = inputInfo.separator;
 		boolean isUndirected = inputInfo.isUndirected;
-		int maxSize = inputInfo.maxSize;
 		String dir = inputInfo.workDir;
 		
+
 		if(Utility.getFS().isDirectory(new Path(dir + Config.undirectGraphDir))){
 			Utility.getFS().delete(new Path(dir + Config.undirectGraphDir));
 		}
@@ -52,7 +54,6 @@ public class PrepareData{
 			ToolRunner.run(new Configuration(), new UndirectGraphDriver(), undirectedOpts);
 			// change the graph input path to the undirected output path
 			inputFilePath = dir + Config.undirectGraphDir;
-			
 		}
 		
 		if(Utility.getFS().isDirectory(new Path(dir + Config.undirectGraphDir))){
@@ -86,8 +87,8 @@ public class PrepareData{
 		// Generate adjlist
 		inputInfo.maxSize = 0;
 		GenAdjList.run(inputInfo);
-		inputInfo.maxSize = maxSize;
-		GenAdjList.run(inputInfo);
+		//inputInfo.maxSize = maxSize;
+		//GenAdjList.run(inputInfo);
 		
 		// Generate bloom filter
 		//DistinctTwinTwig.run(inputInfo);
@@ -97,7 +98,7 @@ public class PrepareData{
 		//GenBloomFilter.run(inputInfo);
 		
 		// Generate Maximal Clique
-		MaximalClique.run(inputInfo);
+		// MaximalClique.run(inputInfo);
 		
 		// Generate Triangle
 		Triangle.run(inputInfo);

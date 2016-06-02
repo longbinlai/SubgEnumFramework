@@ -124,10 +124,25 @@ public class MainEntry{
 			if (Utility.getFS().isDirectory(new Path(workDir + "frame.solarsquare.cnt"))) {
 				Utility.getFS().delete(new Path(workDir + "frame.solarsquare.cnt"));
 			}
+			if (inputInfo.isLeftDeep) {
+				if (Utility.getFS().isDirectory(
+						new Path(workDir + "frame.solarsquare.res.1"))) {
+					Utility.getFS().delete(
+							new Path(workDir + "frame.solarsquare.res.1"));
+				}
+				if (Utility.getFS().isDirectory(
+						new Path(workDir + "frame.solarsquare.res.2"))) {
+					Utility.getFS().delete(
+							new Path(workDir + "frame.solarsquare.res.2"));
+				}
+			}
 			log.info("Start enumerating solar square...");
 			startTime = System.currentTimeMillis();
 			
-			EnumSolarSquare.run(inputInfo);
+			if(inputInfo.isLeftDeep)
+				EnumSolarSquareLD.run(inputInfo);
+			else
+				EnumSolarSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-solarsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
@@ -178,10 +193,10 @@ public class MainEntry{
 			
 			System.out.println(inputInfo.isLeftDeep);
 			
-			if(!inputInfo.isLeftDeep)
-				EnumTwinCSquare.run(inputInfo);
-			else 
+			if(inputInfo.isLeftDeep)
 				EnumTwinCSquareLD.run(inputInfo);
+			else 
+				EnumTwinCSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-tcsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");

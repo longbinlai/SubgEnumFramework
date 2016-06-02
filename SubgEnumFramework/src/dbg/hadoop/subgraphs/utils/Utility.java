@@ -8,12 +8,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 
 import com.google.inject.Key;
 
 import dbg.hadoop.subgraphs.io.HVArray;
+import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.IntegerPairWritable;
 
+import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.map.hash.TLongLongHashMap;
@@ -47,8 +50,22 @@ public class Utility{
 	
 	public static TLongObjectHashMap<long[]> clique = null;
 	
+	public static int count = 0;
+	
 	// The inverted list of cliqueMap in the form of vertex : cliqueID
 	public static TLongLongHashMap cliqueMap = null;
+	
+	public static void main(String[] args){
+		long[] array = {1,2,3,4,5};
+		long cur = 0;
+		int keyMap = 0x15;
+		int starSize = 5;
+		
+		genStars(cur, array, starSize, 0, keyMap);
+		
+		System.out.println("Num Stars: " + count);
+		
+	}
 	
 	public static class VertexComparator implements Comparator<Integer>{
 		@Override
@@ -502,5 +519,77 @@ public class Utility{
 		}
 		writer.close();
 	}
+	
+	/**
+	 * Generate key-value pairs using result and keyMap.
+	 * For example, if {@code result} = {1,2,3,4,5,6,7}, and keyMap = 0110101,
+	 * then the key should be {2,3,5,7} and value is {1,4,6}
+	 * @param result
+	 * @param keyMap
+	 * @return
+	 */
+	public static long[][] getKeyValuePair(long[] result, int keyMap){
+		assert(keyMap < (1 << result.length));
+		long[][] kvPair = new long[2][];
+		int size = result.length;
+		int keyBits = Integer.bitCount(keyMap);
+		int valBits = size - keyBits;
+		long[] key = new long[keyBits];
+		long[] value = new long[valBits];
+		
+		int i = 0, j = 0;
+		
+		int count = size - 1;
+		while(count >= 0){
+			if((keyMap & (1 << count)) == 0){
+				value[j++] = result[size - count - 1];
+			}
+			else{
+				key[i++] = result[size - count - 1];
+			}
+			--count;
+		}
+		kvPair[0] = key;
+		kvPair[1] = value;
+		return kvPair;
+	}
+	
+	
+	public static void genStars(long cur, long[] array, int starSize, int sign, int keyMap){
+		TLongArrayList result = new TLongArrayList(starSize);
+		result.add(cur);
+		genStarsRecur(cur, array, starSize, sign, keyMap, 1, 0, result);
+	}
+	
+	public static void genStarsRecur(long cur, long[] array, int starSize, int sign, int keyMap, 
+			int curLevel, int curIndex, TLongArrayList result){	
+		if(curLevel == starSize){
+			++count;
+			long[][] kv = Utility.getKeyValuePair(result.toArray(), keyMap);
+			//context.write(new HVArraySign(new HVArray(kv[0]), sign), new HVArray(kv[1])); 
+			System.out.println("key: ");
+			for(int i = 0; i < kv[0].length; ++i){
+				System.out.print(kv[0][i] + ",");
+			}
+			System.out.println("\nvalue: ");
+			for(int i = 0; i < kv[1].length; ++i){
+				System.out.print(kv[1][i] + ",");
+			}
+			System.out.println("\n");
+		}
+		else{
+			long tmp = 0L;
+			for(int i = curIndex; i < array.length; ++i){
+				tmp = array[i];
+				//if(this.isFeasible(cur, result, curLevel)){
+				if(result.size() <= curLevel) result.add(tmp);
+				else result.set(curLevel, tmp);
+				genStarsRecur(cur, array, starSize, sign, keyMap, curLevel + 1, i + 1, result);
+				//}
+			}
+		}
+		
+	}
+	
 	
 }

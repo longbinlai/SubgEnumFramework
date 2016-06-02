@@ -35,6 +35,8 @@ public class InputInfo {
 	public boolean isEnumCliqueV2 = false;
 	public boolean isLeftDeep = false;
 	public boolean isNonOverlapping = false;
+	public boolean useStar = false;
+	public boolean isBottomUp = false;
 	public int squarePartitionThresh = 2000;
 	public int chordalSquarePartitionThresh = 2000;
 	public String outputDir = null;
@@ -143,6 +145,7 @@ public class InputInfo {
 				valuePos = args[i].lastIndexOf("=") + 1;
 				if (valuePos != 0) {
 					isLeftDeep = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("is.leftdeep: " + isLeftDeep);
 				}
 			}
 			else if (args[i].contains("is.nonoverlapping")){
@@ -231,6 +234,20 @@ public class InputInfo {
 				if (valuePos != 0) {
 					isFourCliqueSkip = Boolean.parseBoolean(args[i].substring(valuePos));
 					System.out.println("skip.fourclique: " + isFourCliqueSkip);
+				}
+			}
+			else if (args[i].contains("use.star")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					useStar = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("use.star: " + useStar);
+				}
+			}
+			else if (args[i].contains("is.bottom.up")){
+				valuePos = args[i].lastIndexOf("=") + 1;
+				if (valuePos != 0) {
+					isBottomUp = Boolean.parseBoolean(args[i].substring(valuePos));
+					System.out.println("is.bottom.up: " + isBottomUp);
 				}
 			}
 			else if (args[i].contains("enum.clique.v2")){

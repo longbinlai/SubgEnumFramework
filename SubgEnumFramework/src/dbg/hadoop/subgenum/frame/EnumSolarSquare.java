@@ -43,15 +43,14 @@ public class EnumSolarSquare{
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() + "/" +
 					Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
+		if(!inputInfo.isChordalSquareSkip){
+			inputInfo.isCountOnly = false;
+			EnumChordalSquare.run(inputInfo);
+		}
 		
 		if(inputInfo.isChordalSquarePartition && inputInfo.isResultCompression){
 			GeneralPartitioner.run(workDir + "frame.csquare.res", inputInfo.chordalSquarePartitionThresh, 
 					inputInfo.numReducers, inputInfo.jarFile);
-		}
-		
-		if(!inputInfo.isChordalSquareSkip){
-			inputInfo.isCountOnly = false;
-			EnumChordalSquare.run(inputInfo);
 		}
 		inputInfo.isCountOnly = isCountOnly;
 
@@ -87,7 +86,7 @@ public class EnumSolarSquare{
 			String[] opts = { inputInfo.workDir + "frame.solarsquare.res",
 					inputInfo.workDir + "frame.solarsquare.cnt", 
 					inputInfo.numReducers, inputInfo.jarFile };
-			if(inputInfo.isCountOnly) {
+			if(inputInfo.isCountOnly || inputInfo.isLeftDeep) {
 				ToolRunner.run(new Configuration(), new GeneralPatternCountDriver(
 						GeneralPatternCountIdentityMapper.class), opts);
 			}
@@ -230,6 +229,20 @@ class EnumSolarSquareReducer extends
 	}
 }
 
+/**
+ * Suppose the solar square is (0, 1, 2, 3, 4), where (1, 2, 3, 4) are the <br>
+ * vertices of the square and they connect to 0 to form the solar square. <br>
+ * A partial order is assigned: 1 < 2 < 4, 1 < 3. <br>
+ * We first generate the chordal square (0, 3); (2, 4), and then we use (0, 2, 4) as <br>
+ * key to join two identical chordal squares in order to obtain the solar square. <br>
+ * Note that we will receive (0, 2, 4): list_of_vertices in this reducer, and two <br>
+ * vertices 1, 3 from the list_of_vertices will form a solar square with (0, 2, 4) if they satisfy: <br>
+ * 1 < 2 and 1 < 3. Note that as 2 < 4, 1 < 4 is already implied. <br>
+ * Since then, we find search the largeThan2Indices in the sorted list_of_vertices using binary search, <br>
+ * any vertices before the largeThan2Indices can be a match of 1. 
+ * @author robeen
+ *
+ */
 class EnumSolarSquareCountReducer extends
 		Reducer<HVArray, LongWritable, NullWritable, LongWritable> {
 	

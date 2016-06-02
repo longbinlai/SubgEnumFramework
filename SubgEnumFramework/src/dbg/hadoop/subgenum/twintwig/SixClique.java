@@ -40,7 +40,7 @@ import dbg.hadoop.subgraphs.utils.TwinTwigGenerator;
 import dbg.hadoop.subgraphs.utils.Utility;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
-public class FiveClique{
+public class SixClique{
 	
 	public static void main(String[] args) throws Exception {
 		run(new InputInfo(args));
@@ -61,15 +61,21 @@ public class FiveClique{
 			System.exit(-1);;
 		}
 		
-		String stageOneOutput = workDir + "tt.5clique.tmp.1";
-		String stageTwoOutput = workDir + "tt.5clique.tmp.2";
-		String stageThreeOutput = workDir + "tt.5clique.tmp.3";
-		String stageFourOutput = workDir + "tt.5clique.res";
+		String stageOneOutput = workDir + "tt.6clique.tmp.1";
+		String stageTwoOutput = workDir + "tt.6clique.tmp.2";
+		String stageThreeOutput = workDir + "tt.6clique.tmp.3";
+		String stageFourOutput = workDir + "tt.6clique.tmp.4";
+		String stageFiveOutput = workDir + "tt.6clique.tmp.5";
+		String stageSixOutput = workDir + "tt.6clique.tmp.6";
+		String stageSevenOutput = workDir + "tt.6clique.res";
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
 		Utility.getFS().delete(new Path(stageThreeOutput));
 		Utility.getFS().delete(new Path(stageFourOutput));
+		Utility.getFS().delete(new Path(stageFiveOutput));
+		Utility.getFS().delete(new Path(stageSixOutput));
+		Utility.getFS().delete(new Path(stageSevenOutput));
 		
 		Configuration conf = new Configuration();
 		conf.setBoolean("enable.bloom.filter", enableBF);
@@ -84,35 +90,56 @@ public class FiveClique{
 		String adjListDir = isHyper ? workDir + Config.hyperGraphAdjList + ".0" :
 				workDir + Config.adjListDir + ".0";
 		
+		String edgeDir = workDir + Config.preparedFileDir;
+		
 		// The parameters: <inputDir> <outputDir> <numReducers> <jarFile>
+		// Stage 1 and 2, generate four cliques
 		String opts[] = {adjListDir, stageOneOutput, numReducers, jarFile};		
 		ToolRunner.run(conf, new FourCliqueStageOneDriver(), opts);
 		
 		String opts2[] = {adjListDir, stageOneOutput, stageTwoOutput, numReducers, jarFile};
 		ToolRunner.run(conf, new FourCliqueStageTwoDriver(), opts2);
 		
+		// Stage 3 and 4, generate five cliques
 		conf.setInt("twin.twig.output.key.map", 3);
 		String opts3[] = {adjListDir, stageTwoOutput, stageThreeOutput, numReducers, jarFile};
 		ToolRunner.run(conf, new FiveCliqueStageThreeDriver(), opts3);
 		
 		conf.setInt("twin.twig.output.key.map", 7);
-		conf.setBoolean("count.only", inputInfo.isCountOnly);
+		//conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String opts4[] = {adjListDir, stageThreeOutput, stageFourOutput, numReducers, jarFile};
 		ToolRunner.run(conf, new FiveCliqueStageFourDriver(), opts4);
+		
+		// Stage 5 - 7, generate six cliques
+		
+		conf.setInt("twin.twig.output.key.map", 3);
+		String opts5[] = {adjListDir, stageFourOutput, stageFiveOutput, numReducers, jarFile};
+		ToolRunner.run(conf, new SixCliqueStageFiveDriver(), opts5);
+		
+		conf.setInt("twin.twig.output.key.map", 7);
+		String opts6[] = {adjListDir, stageFiveOutput, stageSixOutput, numReducers, jarFile};
+		ToolRunner.run(conf, new SixCliqueStageSixDriver(), opts6);
+		
+		conf.setBoolean("count.only", inputInfo.isCountOnly);
+		String opts7[] = {edgeDir, stageSixOutput, stageSevenOutput, numReducers, jarFile};
+		ToolRunner.run(conf, new SixCliqueStageSevenDriver(), opts7);
 		
 		Utility.getFS().delete(new Path(stageOneOutput));
 		Utility.getFS().delete(new Path(stageTwoOutput));
 		Utility.getFS().delete(new Path(stageThreeOutput));
-		//Utility.getFS().delete(new Path(stageFourOutput));
+		Utility.getFS().delete(new Path(stageFourOutput));
+		Utility.getFS().delete(new Path(stageFiveOutput));
+		Utility.getFS().delete(new Path(stageSixOutput));
+		
 	}
 }
 
 /**
- * The five clique enumeration, stage three, driver. 
+ * The six clique enumeration, stage five, driver. 
  * @author robeen
  *
  */
-class FiveCliqueStageThreeDriver extends Configured implements Tool{
+class SixCliqueStageFiveDriver extends Configured implements Tool{
 
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
 		Configuration conf = getConf();
@@ -122,11 +149,11 @@ class FiveCliqueStageThreeDriver extends Configured implements Tool{
 		conf.setBoolean("mapreduce.map.output.compress", true);
 		conf.set("mapreduce.map.output.compress.codec", "com.hadoop.compression.lzo.LzoCodec");
 		
-		Job job = new Job(conf, "TwinTwig FiveClique Stage three");
+		Job job = new Job(conf, "TwinTwig SixClique Stage Five");
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		//JobConf job = new JobConf(getConf(), this.getClass());
 		
-		job.setReducerClass(FiveCliqueStageThreeReducer.class);
+		job.setReducerClass(SixCliqueStageFiveReducer.class);
 		
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
@@ -141,12 +168,12 @@ class FiveCliqueStageThreeDriver extends Configured implements Tool{
 		MultipleInputs.addInputPath(job, 
 				new Path(args[0]),
 				SequenceFileInputFormat.class,
-				FiveCliqueTwinTwigMapper.class);
+				SixCliqueTwinTwigMapper.class);
 		
 		MultipleInputs.addInputPath(job, 
 				new Path(args[1]),
 				SequenceFileInputFormat.class,
-				FiveCliqueStageThreeMapper.class);
+				SixCliqueStageFiveMapper.class);
 
 		FileOutputFormat.setOutputPath(job, new Path(args[2]));
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -158,7 +185,7 @@ class FiveCliqueStageThreeDriver extends Configured implements Tool{
 	}
 }
 
-class FiveCliqueTwinTwigMapper extends
+class SixCliqueTwinTwigMapper extends
 		Mapper<LongWritable, HyperVertexAdjList, HVArraySign, HVArray> {
 
 	private static BloomFilterOpr bloomfilterOpr = null;
@@ -199,18 +226,18 @@ class FiveCliqueTwinTwigMapper extends
 	}
 }
 
-class FiveCliqueStageThreeMapper extends
+class SixCliqueStageFiveMapper extends
 		Mapper<NullWritable, HVArray, HVArraySign, HVArray> {
 	
 	@Override
 	public void map(NullWritable key, HVArray value, Context context)
 			throws IOException, InterruptedException {
 		context.write(new HVArraySign(value.get(0), value.get(1), Config.LARGESIGN), 
-				new HVArray(value.get(2), value.get(3)));
+				new HVArray(value.get(2), value.get(3), value.get(4)));
 	}
 }
 
-class FiveCliqueStageThreeReducer extends
+class SixCliqueStageFiveReducer extends
 		Reducer<HVArraySign, HVArray, NullWritable, HVArray> {
 	private static TLongArrayList ttOneList = null;
 	private static BloomFilterOpr bloomfilterOpr = null;
@@ -235,12 +262,15 @@ class FiveCliqueStageThreeReducer extends
 				for (long v0 : ttOneList.toArray()) {
 					if(enableBF){
 						isOutput = bloomfilterOpr.get().test(HyperVertex.VertexID(v0), 
-								HyperVertex.VertexID(value.getFirst())) && 
+								HyperVertex.VertexID(value.get(0))) && 
 								bloomfilterOpr.get().test(HyperVertex.VertexID(v0), 
-										HyperVertex.VertexID(value.getSecond()));
+										HyperVertex.VertexID(value.get(1))) &&
+								bloomfilterOpr.get().test(HyperVertex.VertexID(v0), 
+										HyperVertex.VertexID(value.get(2)));
 					}
 					if(isOutput){
-						long array[] = { v0, v1, v2, value.getFirst(), value.getSecond() };
+						long array[] = { v0, v1, v2, value.get(0), value.get(1), value.get(2) };
+						//System.out.println(HyperVertex.HVArrayToString(array));
 						context.write(NullWritable.get(), new HVArray(array));
 					}
 				}
@@ -274,7 +304,7 @@ class FiveCliqueStageThreeReducer extends
 	}
 }
 
-class FiveCliqueStageFourDriver extends Configured implements Tool{
+class SixCliqueStageSixDriver extends Configured implements Tool{
 
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
 		Configuration conf = getConf();
@@ -284,23 +314,17 @@ class FiveCliqueStageFourDriver extends Configured implements Tool{
 		conf.setBoolean("mapreduce.map.output.compress", true);
 		conf.set("mapreduce.map.output.compress.codec", "com.hadoop.compression.lzo.LzoCodec");
 		
-		Job job = new Job(conf, "TwinTwig FiveClique Stage Four");
+		Job job = new Job(conf, "TwinTwig SixClique Stage Six");
 		((JobConf)job.getConfiguration()).setJar(args[4]);
 		//JobConf job = new JobConf(getConf(), this.getClass());
-		boolean isCountOnly = conf.getBoolean("count.only", false);
-		
+
 		job.setMapOutputKeyClass(HVArraySign.class);
 		job.setMapOutputValueClass(HVArray.class);
 		job.setOutputKeyClass(NullWritable.class);
 		
-		if(!isCountOnly) {
-			job.setReducerClass(FiveCliqueStageFourReducer.class);
-			job.setOutputValueClass(HVArray.class);
-		}
-		else{
-			job.setReducerClass(FiveCliqueStageFourCountReducer.class);
-			job.setOutputValueClass(LongWritable.class);
-		}
+		job.setReducerClass(SixCliqueStageSixReducer.class);
+		job.setOutputValueClass(HVArray.class);
+
 		
 		job.setSortComparatorClass(HVArraySignComparator.class);
 		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
@@ -310,12 +334,12 @@ class FiveCliqueStageFourDriver extends Configured implements Tool{
 		MultipleInputs.addInputPath(job, 
 				new Path(args[0]),
 				SequenceFileInputFormat.class,
-				FiveCliqueTwinTwigMapper.class);
+				SixCliqueTwinTwigMapper.class);
 		
 		MultipleInputs.addInputPath(job, 
 				new Path(args[1]),
 				SequenceFileInputFormat.class,
-				FiveCliqueStageFourMapper.class);
+				SixCliqueStageSixMapper.class);
 
 		FileOutputFormat.setOutputPath(job, new Path(args[2]));
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -327,17 +351,17 @@ class FiveCliqueStageFourDriver extends Configured implements Tool{
 	}
 }
 
-class FiveCliqueStageFourMapper extends
+class SixCliqueStageSixMapper extends
 		Mapper<NullWritable, HVArray, HVArraySign, HVArray> {
 	@Override
 	public void map(NullWritable key, HVArray value, Context context)
 			throws IOException, InterruptedException {
 		context.write(new HVArraySign(value.get(0), value.get(3), value.get(4),
-				Config.LARGESIGN), new HVArray(value.get(1), value.get(2)));
+				Config.LARGESIGN), new HVArray(value.get(1), value.get(2), value.get(5)));
 	}
 }
 
-class FiveCliqueStageFourReducer extends
+class SixCliqueStageSixReducer extends
 		Reducer<HVArraySign, HVArray, NullWritable, HVArray> {
 	
 	@Override
@@ -355,14 +379,116 @@ class FiveCliqueStageFourReducer extends
 			if (_key.sign == Config.SMALLSIGN) {
 				continue;
 			} else {
-				long[] array = { v0, value.getFirst(), value.getSecond(), v3, v4 };
+				long[] array = {v0, value.get(0), value.get(1), v3, v4, value.get(2)};
+				//System.out.println(HyperVertex.HVArrayToString(array));
 				context.write(NullWritable.get(), new HVArray(array));
 			}
 		}
 	}
 }
 
-class FiveCliqueStageFourCountReducer extends
+class SixCliqueStageSevenDriver extends Configured implements Tool{
+
+	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
+		Configuration conf = getConf();
+		// The parameters: <edgeDir> <stageThreeOutput> <outputDir> <numReducers> <jarFile>
+		int numReducers = Integer.parseInt(args[3]);
+		
+		conf.setBoolean("mapreduce.map.output.compress", true);
+		conf.set("mapreduce.map.output.compress.codec", "com.hadoop.compression.lzo.LzoCodec");
+		
+		Job job = new Job(conf, "TwinTwig SixClique Stage seven");
+		((JobConf)job.getConfiguration()).setJar(args[4]);
+		//JobConf job = new JobConf(getConf(), this.getClass());
+		boolean isCountOnly = conf.getBoolean("count.only", false);
+		
+		job.setMapOutputKeyClass(HVArraySign.class);
+		job.setMapOutputValueClass(HVArray.class);
+		job.setOutputKeyClass(NullWritable.class);
+		
+		if(!isCountOnly) {
+			job.setReducerClass(SixCliqueStageSevenReducer.class);
+			job.setOutputValueClass(HVArray.class);
+		}
+		else{
+			job.setReducerClass(SixCliqueCountReducer.class);
+			job.setOutputValueClass(LongWritable.class);
+		}
+		
+		job.setSortComparatorClass(HVArraySignComparator.class);
+		job.setGroupingComparatorClass(HVArrayGroupComparator.class);
+		
+		job.setNumReduceTasks(numReducers);
+		//FileInputFormat.setInputPaths(job, new Path(args[0]));
+		MultipleInputs.addInputPath(job, 
+				new Path(args[0]),
+				SequenceFileInputFormat.class,
+				SixCliqueEdgeMapper.class);
+		
+		MultipleInputs.addInputPath(job, 
+				new Path(args[1]),
+				SequenceFileInputFormat.class,
+				SixCliqueStageSevenMapper.class);
+
+		FileOutputFormat.setOutputPath(job, new Path(args[2]));
+		job.setOutputFormatClass(SequenceFileOutputFormat.class);
+		SequenceFileOutputFormat.setOutputCompressionType(job, CompressionType.BLOCK);
+		SequenceFileOutputFormat.setOutputCompressorClass(job, LzoCodec.class);
+
+		job.waitForCompletion(true);
+		return 0;
+	}
+}
+
+class SixCliqueEdgeMapper extends
+		Mapper<LongWritable, LongWritable, HVArraySign, HVArray> {
+	@Override
+	public void map(LongWritable key, LongWritable value, Context context)
+			throws IOException, InterruptedException {
+
+		context.write(new HVArraySign(key.get(), value.get(),
+				Config.SMALLSIGN), new HVArray());
+	}
+}
+
+
+class SixCliqueStageSevenMapper extends
+		Mapper<NullWritable, HVArray, HVArraySign, HVArray> {
+	@Override
+	public void map(NullWritable key, HVArray value, Context context)
+			throws IOException, InterruptedException {
+		long[] array = {value.get(1), value.get(2), value.get(3), value.get(4)};
+		context.write(new HVArraySign(value.get(0), value.get(5), Config.LARGESIGN), 
+				new HVArray(array));
+	}
+}
+
+class SixCliqueStageSevenReducer extends
+		Reducer<HVArraySign, HVArray, NullWritable, HVArray> {
+
+	@Override
+	public void reduce(HVArraySign _key, Iterable<HVArray> values,
+			Context context) throws IOException, InterruptedException {
+		if (_key.sign != Config.SMALLSIGN) {
+			return;
+		}
+
+		long v0 = _key.vertexArray.get(0);
+		long v5 = _key.vertexArray.get(1);
+
+		for (HVArray value : values) {
+			if (_key.sign == Config.SMALLSIGN) {
+				continue;
+			} else {
+				long[] array = { v0, value.get(0), value.get(1), value.get(2), value.get(3), v5 };
+				//System.out.println(HyperVertex.HVArrayToString(array));
+				context.write(NullWritable.get(), new HVArray(array));
+			}
+		}
+	}
+}
+
+class SixCliqueCountReducer extends
 		Reducer<HVArraySign, HVArray, NullWritable, LongWritable> {
 
 	@Override

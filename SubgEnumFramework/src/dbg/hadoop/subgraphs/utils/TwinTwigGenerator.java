@@ -1,5 +1,7 @@
 package dbg.hadoop.subgraphs.utils;
 
+import gnu.trove.list.array.TLongArrayList;
+
 import java.io.IOException;
 
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -242,6 +244,72 @@ public class TwinTwigGenerator{
 	    		}
 	    	}
 	    }
+	}
+	
+	/**
+	 * This is the function that generates particular stars for clique enumeration.
+	 * The star should have the cur vertex as the smallest vertex.
+	 * @param context
+	 * @param starSize Number of edges of the star
+	 * @param sign LargeSign or SmallSign, used to different the join elements in a binary join
+	 * @param keyMap Which vertex of the star should serve the key. For example, if the star is
+	 * (0, 1, 2, 3, 4, 5), a keyMap 001101 would have 2, 3, 5 as the key, and the remaining ones
+	 * as the value.
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 */
+	public void genStars(Context context, int starSize, int sign, int keyMap) throws IOException, InterruptedException{
+		TLongArrayList result = new TLongArrayList(starSize);
+		result.add(this.cur);
+		genStarsRecur(context, starSize, sign, keyMap, 1, 0, result);
+	}
+	
+	/**
+	 * A recursive function to generate stars. 
+	 * Let curLevel be a value from 0 ... starSize - 1. While approaching the last level (starSize - 1),
+	 * the function will recursively choose one value from curIndex from 
+	 * the {@code largerThanCur} array, add it to result at the index of curLevel,
+	 * and step into the next level (letting curLeve + 1).
+	 * @param context
+	 * @param curLevel
+	 * @param starSize
+	 * @param sign
+	 * @param keyMap
+	 * @param result
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 */
+	public void genStarsRecur(Context context, int starSize, int sign, int keyMap, 
+			int curLevel, int curIndex, TLongArrayList result) throws IOException, InterruptedException{	
+		if(curLevel == starSize){
+			long[][] kv = Utility.getKeyValuePair(result.toArray(), keyMap);
+			context.write(new HVArraySign(new HVArray(kv[0]), sign), new HVArray(kv[1])); 
+		}
+		else{
+			long tmp = 0L;
+			for(int i = curIndex; i < this.largerThanCur.length; ++i){
+				tmp = this.largerThanCur[i];
+				if(this.isFeasible(tmp, result, curLevel)){
+					if(result.size() <= curLevel) result.add(tmp);
+					else result.set(curLevel, tmp);
+					this.genStarsRecur(context, starSize, sign, keyMap, curLevel + 1, i + 1, result);
+				}
+			}
+		}
+		
+	}
+	
+	private boolean isFeasible(long tmp, TLongArrayList existed, int curLevel){
+		boolean avail = true;
+		if(!this.enableBF){
+			return avail;
+		}
+		for(int i = 1; i < curLevel; ++i){
+			avail = this.bf.test(HyperVertex.VertexID(existed.get(i)), HyperVertex.VertexID(tmp));
+			if(!avail) break;
+		}
+		return avail;
+		
 	}
 	
 	/**

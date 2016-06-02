@@ -68,20 +68,23 @@ public class House{
 		Utility.getFS().delete(new Path(stageTwoOutput));
 		
 		Configuration conf = new Configuration();
+		
+		// Force to use bloomfilter for square
+		DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() 
+				+ "/" + Config.bloomFilterFileDir + "/" + "bloomFilter." 
+				+ Config.TWINTWIG1 + "." + bfProbFP), conf);
+		conf.setBoolean("enable.bloom.filter", true);
+		conf.setDouble("bloom.filter.false.positive.rate", bfProbFP);
+		
+		String[] opts1 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
+		ToolRunner.run(conf, new SquareDriver(), opts1);
+		
+		conf.setBoolean("enable.bloom.filter", enableBloomFilter);
 		if(enableBloomFilter){
-			conf.setBoolean("enable.bloom.filter", true);
-			conf.setDouble("bloom.filter.false.positive.rate", bfProbFP);
-			//String bloomFilterFileName = "bloomFilter." + Config.TWINTWIG1 + "." + bfProbFP;
-			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() 
-					+ "/" + Config.bloomFilterFileDir + "/" + "bloomFilter." 
-					+ Config.TWINTWIG1 + "." + bfProbFP), conf);
 			DistributedCache.addCacheFile(new URI(new Path(workDir).toUri().toString() 
 					+ "/" + Config.bloomFilterFileDir + "/" + "bloomFilter." 
 					+ Config.EDGE + "." + bfProbFP), conf);
 		}
-		
-		String[] opts1 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, numReducers, jarFile };
-		ToolRunner.run(conf, new SquareDriver(), opts1);
 		
 		conf.setBoolean("count.only", inputInfo.isCountOnly);
 		String[] opts2 = { workDir + Config.adjListDir + "." + maxSize, stageOneOutput, stageTwoOutput, numReducers, jarFile };

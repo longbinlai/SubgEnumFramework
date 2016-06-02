@@ -1,6 +1,9 @@
 package dbg.hadoop.subgenum.twintwig;
 
 import org.apache.log4j.Logger;
+
+import dbg.hadoop.subgenum.star.Clique;
+import dbg.hadoop.subgenum.star.CliqueB;
 import dbg.hadoop.subgraphs.utils.InputInfo;
 
 public class MainEntry{
@@ -33,18 +36,30 @@ public class MainEntry{
 			int k = Integer.parseInt(inputInfo.cliqueNumVertices);
 			log.info("TwinTwig: Start enumerating " + k + "clique...");
 			startTime = System.currentTimeMillis();
-			if(k == 4) {
-				FourClique.run(inputInfo);
+			if (inputInfo.useStar) { // Use star instead of TwinTwig
+				if(inputInfo.isBottomUp) CliqueB.run(inputInfo);
+				else Clique.run(inputInfo);
 			}
-			else if(k == 5){
-				FiveClique.run(inputInfo);
-			}
-			else {
-				System.err.println("Specify invalid clique size: " + k);
-				System.exit(0);
+			else { // Using stars
+				if (k == 4) {
+					FourClique.run(inputInfo);
+				} else if (k == 5) {
+					FiveClique.run(inputInfo);
+				} else if (k == 6) {
+					SixClique.run(inputInfo);
+				} else {
+					System.err.println("Specify invalid clique size: " + k);
+					System.exit(0);
+				}
 			}
 			endTime=System.currentTimeMillis();
-			log.info("[TwinTwig-4Clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			if(inputInfo.useStar){
+				log.info("[Star-" + k + "Clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			}
+			else {
+				log.info("[TwinTwig-" + k + "Clique] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			}
+			
 		}
 		// House is query: q4
 		else if (query.compareTo("house") == 0 || query.compareTo("q4") == 0) {

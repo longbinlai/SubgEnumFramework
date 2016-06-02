@@ -5,10 +5,10 @@ public class BinarySearch {
 		int left = 0;
 		int right = list.length - 1;
 		while (left <= right) {
-			int mid = left + (right - left) / 2;
+			int mid = left + ((right - left) >> 1);
 			if (list[mid] == target)
 				return mid;
-			else if (HyperVertex.compare(list[mid], target) > 0)
+			else if (list[mid] > target)
 				right = mid - 1;
 			else
 				left = mid + 1;
@@ -17,28 +17,22 @@ public class BinarySearch {
 	}
 
 	public static int findLargeIndex(long target, long[] list) {
-		int res = 0;
+		int res = -1;
 		int left = 0;
 		int right = list.length - 1;
 		while (left <= right) {
-			int mid = left + (right - left) / 2;
+			int mid = left + ((right - left) >> 1);
 			if (list[mid] == target) {
 				res = mid + 1;
 				break;
-			} else if (HyperVertex.compare(list[mid], target) > 0) {
+			} else if (list[mid] > target) {
 				right = mid - 1;
 			} else {
 				left = mid + 1;
 			}
-			if (left > right) {
-				if (HyperVertex.compare(list[mid], target) > 0) {
-					res = mid;
-					break;
-				} else {
-					res = mid + 1;
-					break;
-				}
-			}
+		}
+		if(res == -1){
+			res = left;
 		}
 		return res;
 	}
