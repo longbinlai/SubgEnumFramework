@@ -81,8 +81,8 @@ public class FiveClique{
 					.toString() + "/" + Config.bloomFilterFileDir + "/" + bloomFilterFileName), conf);
 		}
 		
-		String adjListDir = isHyper ? workDir + Config.hyperGraphAdjList + ".0" :
-				workDir + Config.adjListDir + ".0";
+		String adjListDir = isHyper ? workDir + Config.hyperGraphAdjList + "." + inputInfo.maxSize :
+				workDir + Config.adjListDir + "." + inputInfo.maxSize;
 		
 		// The parameters: <inputDir> <outputDir> <numReducers> <jarFile>
 		String opts[] = {adjListDir, stageOneOutput, numReducers, jarFile};		

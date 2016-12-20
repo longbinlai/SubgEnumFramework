@@ -6,8 +6,11 @@ import gnu.trove.map.hash.TIntLongHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.set.hash.TLongHashSet;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,6 +18,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
 
@@ -533,6 +537,29 @@ public class Graph{
 		return (graph.containsKey(source) && graph.get(source).contains(target));
 	}
 	
+	/**
+	 * Remove a node from the graph
+	 * @param a
+	 * @return True if removed successfully, False otherwise
+	 */
+	public boolean removeNode(long a){
+		TLongArrayList neighbors = this.getAdjList(a);
+		if(neighbors != null && neighbors.size() != 0){
+			for(long nbr : neighbors.toArray()){
+				if(!this.removeEdge(a, nbr)){
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * Remove an edge from the graph
+	 * @param a Source node of the edge
+	 * @param b End node of the edge
+	 * @return True if removed successfully, False otherwise
+	 */
 	public boolean removeEdge (long a, long b) {
 
 		boolean res = this.removeOrientedEdge(a,b) && this.removeOrientedEdge(b,a);
@@ -858,6 +885,102 @@ public class Graph{
 		return res;
 	}
 	
+	/*
+	public List<TLongArrayList> getCliqueCover(int threshold){
+		System.out.println("Get clique cover...");
+		List<TLongArrayList> res = new ArrayList<TLongArrayList>();
+		long curNode = 0;
+		TLongArrayList curClique = null;
+		TLongArrayList curAdjList = null;
+		while(!this.isEmpty()){
+			curNode = this.getNodesWithLargestDegree();
+			if(this.getNodeDegree(curNode) < threshold){
+				break;
+			}
+			curAdjList = this.getSortedAdjList(curNode);
+			curAdjList.reverse();
+			curClique = this.maximumClique(curNode, curAdjList, threshold - 1);
+			// curClique.add(curNode);
+			// Remove the clique anyway
+			for(long node : curClique.toArray()){
+				this.removeNode(node);
+				System.out.println("# edges: " + this.unorientedSize);
+			}
+			if(curClique.size() >= threshold){
+				System.out.print(curClique.size() + "-clique: ");
+				for(long v : curClique.toArray()){
+					System.out.print(v + ",");
+				}
+				System.out.println();
+				curClique.sort();
+				res.add(curClique);
+			}
+		}
+		return res;
+	}
+	*/
+	
+	/**
+	 * Find the maximumclique in curNode's neighbors (adjList), <br>
+	 * whose size should be not smaller than threshold - 1
+	 * @param curNode
+	 * @param adjList
+	 * @param threshold
+	 * @return The found maximum clique
+	 */
+	/*
+	private TLongArrayList maximumClique(long curNode, TLongArrayList adjList, int threshold){
+		TLongArrayList res = new TLongArrayList();
+		res.add(curNode);
+		
+		TLongArrayList curClique = null;
+		TLongArrayList temp = null;
+		int largest = Integer.MIN_VALUE;
+		long nextNode = 0;
+		
+		for(int i = 0; i < adjList.size(); ++i){
+			nextNode = adjList.get(i);
+			TLongArrayList nextAdjList = new TLongArrayList(); 
+			for(int j = i + 1; j < adjList.size(); ++j){
+				long cand = adjList.get(j);
+				if(cand == curNode) continue;
+				if(this.hasNeighbor(nextNode, cand)){
+					nextAdjList.add(cand);
+				}
+			}
+			if(nextAdjList.size() > largest && nextAdjList.size() >= threshold - 1){
+				temp = this.maximumClique(nextNode, nextAdjList, threshold - 1);
+			}
+			if(temp != null){
+				if(largest < temp.size()){
+					largest = temp.size();
+					curClique = temp;
+				}
+			}
+		}
+		if(curClique != null) res.addAll(curClique);
+		return res;
+	}
+	*/
+	
+	/**
+	 * An O(n) algorithm to find the node with largest degree
+	 * @return
+	 */
+	public long getNodesWithLargestDegree(){
+		long res = 0;
+		int curDeg = Integer.MIN_VALUE;
+		TLongIterator iter = this.getNodeList().iterator();
+		while(iter.hasNext()){
+			long cur = iter.next();
+			if(this.degrees.get(cur) > curDeg){
+				res = cur;
+				curDeg = this.degrees.get(cur);
+			}
+		}
+		return res;
+	}
+	
 	public void clear() {
 		if(this.cliqueSet != null)
 			this.cliqueSet.clear();
@@ -873,5 +996,32 @@ public class Graph{
 		unorientedSize=0;
 		orientedSize=0;
 		countRunning = 0;
+	}
+	
+	/**
+	 * Construct the graph from file. <br>
+	 * The file has the format as: a[seperator]b in each line.
+	 * @param filename
+	 * @param seperator
+	 * @throws IOException 
+	 */
+	public void constructFromFile(File file, String seperator) throws IOException{
+		System.out.println("Reading graph...");
+		BufferedReader reader = new BufferedReader(new FileReader(file));
+		String line = "";
+		String[] edges = null;  
+		while((line = reader.readLine()) != null){
+			if(line.charAt(0) == '#') continue;
+			edges = line.split(seperator);
+			if(edges.length != 2) continue;
+			// Remove self loop
+			if(edges[0].compareTo(edges[1]) == 0) continue;
+			this.addEdge(Long.valueOf(edges[0]), Long.valueOf(edges[1]));
+		}
+		System.out.println("Finish reading graph...");
+	}
+	
+	public boolean isEmpty(){
+		return this.degrees.isEmpty();
 	}
 }

@@ -2,6 +2,7 @@ package dbg.hadoop.subgraphs.utils;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.hash.TLongHashSet;
@@ -63,7 +64,7 @@ public class BronKerboschCliqueFinder
     }
     
     public Collection<long[]> getNonOverlapMaximalClique(int cliqueSizeThresh){
-    	ArrayList<long[]> res = new ArrayList<long[]>();
+    	List<long[]> res = new ArrayList<long[]>();
     	cliques = new ArrayList<TLongHashSet>();
         TLongArrayList potential_clique = new TLongArrayList();
         TLongArrayList candidates = new TLongArrayList();
@@ -146,6 +147,19 @@ public class BronKerboschCliqueFinder
         }
         return biggest_cliques;
     }
+    
+    public TLongArrayList getFirstLargestMaximalClique(){
+    	getAllMaximalCliques();
+    	 int maximum = 0;
+    	 TLongHashSet target = null;
+         for (TLongHashSet clique : cliques) {
+             if (maximum < clique.size()) {
+                 maximum = clique.size();
+                 target = clique;
+             }
+         }
+         return new TLongArrayList(target);
+    }
 
     private void findCliques(
         TLongArrayList potential_clique,
@@ -155,6 +169,7 @@ public class BronKerboschCliqueFinder
         TLongArrayList candidates_array = new TLongArrayList(candidates);
         if (!end(candidates, already_found)) {
             // for each candidate_node in candidates do
+        	//int count = 0;
             for (long candidate : candidates_array.toArray()) {
                 TLongArrayList new_candidates = new TLongArrayList();
                 TLongArrayList new_already_found = new TLongArrayList();
@@ -195,7 +210,7 @@ public class BronKerboschCliqueFinder
 
                 // move candidate_node from potential_clique to already_found;
                 already_found.add(candidate);
-                potential_clique.remove(candidate);
+                potential_clique.removeAt(potential_clique.size() - 1);
             } // of for
         } // of if
     }

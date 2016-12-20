@@ -46,7 +46,7 @@ public class MainEntry{
 			}
 			log.info("Start enumerating chordal square...");
 			startTime = System.currentTimeMillis();
-			
+			inputInfo.enableBF = false;
 			EnumChordalSquare.run(inputInfo);
 			
 			endTime=System.currentTimeMillis();
@@ -191,7 +191,7 @@ public class MainEntry{
 			log.info("Start enumerating twin chordal square...");
 			startTime = System.currentTimeMillis();
 			
-			System.out.println(inputInfo.isLeftDeep);
+			//System.out.println(inputInfo.isLeftDeep);
 			
 			if(inputInfo.isLeftDeep)
 				EnumTwinCSquareLD.run(inputInfo);
@@ -201,6 +201,25 @@ public class MainEntry{
 			endTime=System.currentTimeMillis();
 			log.info("[Frame-tcsquare] Time elapsed: " + (endTime - startTime) / 1000 + "s");
 			EnumTwinCSquare.countOnce(inputInfo);
+		}
+		else if (query.compareTo("quadtriangle") == 0 || query.compareTo("q9") == 0) {
+			Utility.getFS().delete(new Path(workDir + "frame.quadtriangle.res.1"));
+			Utility.getFS().delete(new Path(workDir + "frame.quadtriangle.res"));
+			Utility.getFS().delete(new Path(workDir + "frame.quadtriangle.cnt"));
+			log.info("Start enumerating quad triangle ...");
+			startTime = System.currentTimeMillis();
+			
+			//System.out.println(inputInfo.isLeftDeep);
+			if(inputInfo.isLeftDeep) {
+				Utility.getFS().delete(new Path(workDir + "frame.quadtriangle.res.2"));
+				EnumQuadTriangleLD.run(inputInfo);
+			}
+			else
+				EnumQuadTriangle.run(inputInfo);
+			
+			endTime=System.currentTimeMillis();
+			log.info("[Frame-quadtriangle] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+			EnumQuadTriangle.countOnce(inputInfo);
 		}
 		else {
 			System.err.println("Please specify enum.query=[...];");

@@ -164,6 +164,10 @@ public class HVArray implements WritableComparable, Writable {
 		System.arraycopy(vertices, 0, this.hyperVertexArray, 0, this.length);
 	}
 	
+	public void set(int index, long val){
+		this.hyperVertexArray[index] = val;
+	}
+	
 	public int size(){
 		return this.length;
 	}

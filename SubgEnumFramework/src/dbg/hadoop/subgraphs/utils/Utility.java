@@ -8,12 +8,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 
-import com.google.inject.Key;
 
 import dbg.hadoop.subgraphs.io.HVArray;
-import dbg.hadoop.subgraphs.io.HVArraySign;
 import dbg.hadoop.subgraphs.io.IntegerPairWritable;
 
 import gnu.trove.list.array.TLongArrayList;
@@ -21,7 +18,6 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
-import gnu.trove.set.hash.TLongHashSet;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -34,8 +30,10 @@ import java.io.OutputStreamWriter;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -56,15 +54,41 @@ public class Utility{
 	public static TLongLongHashMap cliqueMap = null;
 	
 	public static void main(String[] args){
-		long[] array = {1,2,3,4,5};
-		long cur = 0;
-		int keyMap = 0x15;
-		int starSize = 5;
+		if(args.length != 3){
+			System.out.println("Usage: java Utility <filename> <seperator> <thresh>" );
+			System.exit(-1);
+		}
+		File file = new File(args[0]);
+		String sep = "\t";
+		if(args[1].compareTo("comma") == 0){
+			sep = ",";
+		}
+		else if(args[1].compareTo("space") == 0){
+			sep = " ";
+		}
+		int thresh = Integer.valueOf(args[2]);
+		Graph g = new Graph();
+		try {
+			g.constructFromFile(file, sep);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		genStars(cur, array, starSize, 0, keyMap);
-		
-		System.out.println("Num Stars: " + count);
-		
+		BronKerboschCliqueFinder cliqueFinder = new BronKerboschCliqueFinder(g);
+		Collection<long[]> cliques = null;
+		long begin = System.currentTimeMillis();
+		cliques = cliqueFinder.getNonOverlapMaximalClique(thresh);
+		long end = System.currentTimeMillis();
+		System.out.println("Time elapsed : " + (end - begin)/ 1000 + "s");
+		for(long[] clique : cliques){
+			System.out.print(clique.length + "-clique: ");
+			for(long v : clique){
+				System.out.print(v + ",");
+			}
+			System.out.println();
+			System.out.println();
+		}
 	}
 	
 	public static class VertexComparator implements Comparator<Integer>{

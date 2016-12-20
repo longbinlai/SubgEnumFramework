@@ -6,6 +6,8 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Writable;
@@ -16,11 +18,17 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 
 import com.hadoop.compression.lzo.LzoCodec;
+
+import dbg.hadoop.subgraphs.io.HVArray;
+import dbg.hadoop.subgraphs.io.HVArrayGroupComparator;
+import dbg.hadoop.subgraphs.io.HVArraySign;
+import dbg.hadoop.subgraphs.io.HVArraySignComparator;
 
 @SuppressWarnings("rawtypes")
 public class GeneralDriver extends Configured implements Tool{
@@ -134,6 +142,30 @@ public class GeneralDriver extends Configured implements Tool{
 		this.sortComparatorClass = _sortComparatorCls;
 	}
 	
+	public GeneralDriver(String _name,
+			Class<? extends Mapper> _mapperCls, 
+			Class<? extends Reducer> _reducerCls,
+			Class<? extends Writable> _outputKeyCls,
+			Class<? extends Writable> _outputValueCls,
+			Class<? extends Writable> _mapOutputKeyCls,
+			Class<? extends Writable> _mapOutputValueCls,
+			Class<? extends InputFormat> _inputFormatCls,
+			Class<? extends OutputFormat> _outputFormatCls,
+			Class<? extends RawComparator> _sortComparatorCls,
+			Class<? extends RawComparator> _groupingComparatorCls) {
+		this.driverName = _name;
+		this.mapperClass1 = _mapperCls;
+		this.reducerClass = _reducerCls;
+		this.outputKeyClass = _outputKeyCls;
+		this.outputValueClass = _outputValueCls;
+		this.mapOutputKeyClass = _mapOutputKeyCls;
+		this.mapOutputValueClass = _mapOutputValueCls;
+		this.inputFormatClass1 = _inputFormatCls;
+		this.outputFormatClass = _outputFormatCls;
+		this.sortComparatorClass = _sortComparatorCls;
+		this.groupingComparatorClass = _groupingComparatorCls;
+	}
+	
 	/**
 	 * @param _name
 	 * @param _mapperCls1
@@ -176,7 +208,9 @@ public class GeneralDriver extends Configured implements Tool{
 		this.sortComparatorClass = _sortComparatorCls;
 		this.groupingComparatorClass = _groupingComparatorCls;
 	}
-	
+
+
+
 	@SuppressWarnings("deprecation")
 	public int run(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
 		assert(mapperClass1 != null);

@@ -3,7 +3,9 @@ package dbg.hadoop.subgenum.prepare;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
+import dbg.hadoop.subgenum.frame.MainEntry;
 import dbg.hadoop.subgenum.hypergraph.adjlist.GenAdjList;
 import dbg.hadoop.subgenum.hypergraph.bloomfilter.DistinctTwinTwig;
 import dbg.hadoop.subgenum.hypergraph.bloomfilter.GenBloomFilter;
@@ -15,10 +17,13 @@ import dbg.hadoop.subgraphs.utils.Utility;
 
 public class PrepareData{
 	private static InputInfo inputInfo = null;
+	private static Logger log = Logger.getLogger(PrepareData.class);
+	
 	@SuppressWarnings("deprecation")
 	public static void main(String[] args) throws Exception{
 		inputInfo = new InputInfo(args);
 		int maxSize = inputInfo.maxSize;
+		long begin = 0, end = 0;
 		
 		
 		String numReducers = inputInfo.numReducers;
@@ -87,20 +92,31 @@ public class PrepareData{
 		// Generate adjlist
 		inputInfo.maxSize = 0;
 		GenAdjList.run(inputInfo);
-		//inputInfo.maxSize = maxSize;
-		//GenAdjList.run(inputInfo);
+		inputInfo.maxSize = maxSize;
+		GenAdjList.run(inputInfo);
 		
 		// Generate bloom filter
-		//DistinctTwinTwig.run(inputInfo);
+		DistinctTwinTwig.run(inputInfo);
 		inputInfo.bfType = Config.EDGE;
 		GenBloomFilter.run(inputInfo);
-		//inputInfo.bfType = Config.TWINTWIG1;
-		//GenBloomFilter.run(inputInfo);
+		inputInfo.bfType = Config.TWINTWIG1;
+		GenBloomFilter.run(inputInfo);
 		
+
+		log.info("Start enumerating maximal cliques..");
+		begin = System.currentTimeMillis();
 		// Generate Maximal Clique
-		// MaximalClique.run(inputInfo);
+		MaximalClique.run(inputInfo);
+		end = System.currentTimeMillis();
 		
+		log.info("[Pre-Clique] Time elapsed: " + (end - begin) / 1000 + "s");
+		
+		log.info("Star enumrating triangles to construct local graphs.");
+		begin = System.currentTimeMillis();
 		// Generate Triangle
 		Triangle.run(inputInfo);
+		end = System.currentTimeMillis();
+		
+		log.info("[Pre-Triangle] Time elapsed: " + (end - begin) / 1000 + "s");
 	}
 }

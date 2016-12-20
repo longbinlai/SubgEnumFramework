@@ -2,6 +2,7 @@ package dbg.hadoop.subgenum.twintwig;
 
 import org.apache.log4j.Logger;
 
+import dbg.hadoop.subgenum.hypergraph.triangle.Triangle;
 import dbg.hadoop.subgenum.star.Clique;
 import dbg.hadoop.subgenum.star.CliqueB;
 import dbg.hadoop.subgraphs.utils.InputInfo;
@@ -15,8 +16,16 @@ public class MainEntry{
 		String query = inputInfo.query.toLowerCase();
 		long startTime = 0;
 		long endTime = 0;
+		
+		if(query.compareTo("triangle") == 0 || query.compareTo("q1") == 0){
+			log.info("TwinTwig: Start enumerating square...");
+			startTime = System.currentTimeMillis();	
+			Triangle.run(inputInfo);
+			endTime=System.currentTimeMillis();
+			log.info("[TwinTwig-square] Time elapsed: " + (endTime - startTime) / 1000 + "s");
+		}
 		// Square is query: q1
-		if(query.compareTo("square") == 0 || query.compareTo("q1") == 0){
+		else if(query.compareTo("square") == 0 || query.compareTo("q1") == 0){
 			log.info("TwinTwig: Start enumerating square...");
 			startTime = System.currentTimeMillis();	
 			Square.run(inputInfo);
@@ -96,7 +105,7 @@ public class MainEntry{
 		}
 		else {
 			System.err.println("Please specify enum.query=[...];");
-			System.err.println("Supported queries are: square, " +
+			System.err.println("Supported queries are: triangle, square, " +
 					"chordalsquare, clique, house, solarsquare, " +
 					"twintriangle, near5clique;");
 			System.exit(0);
