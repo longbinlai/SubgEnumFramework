@@ -7,7 +7,7 @@ import math
 # To run the pattern decomposition, please download graphgen from:
 # https://www-complexnetworks.lip6.fr/~latapy/FV/generation.html
 # It will generate the degree sequence of a random graph with power-law
-# distribution. We should configure the following gen_graph_dir if needed.
+# distribution. Please configure the following gen_graph_dir if needed.
 class PatternDec:
     ''' Degree sequence'''
     deg_array = []
