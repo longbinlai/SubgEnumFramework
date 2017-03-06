@@ -143,8 +143,6 @@ class PatternDec:
     def est_num_matches_powerlaw_graph(self, subg):
         dfs_edges = list(nx.dfs_edges(subg))
         non_dfs_edges = self.set_minus(subg.edges(), dfs_edges)
-        #print(dfs_edges)
-        #print(non_dfs_edges)
         gTmp = nx.Graph()
         cur_num_matches = 1
         for e in dfs_edges: #Compute case I
@@ -205,11 +203,9 @@ class PatternDec:
                 self.subgraph_hash_table[label]['lhs'] = ''
                 self.subgraph_hash_table[label]['rhs'] = ''
         for subg_label in subgraph_labels:
-            #print('current subgraph:',  subg_label)
             subg = self.subgraph_hash_table[subg_label]['graph']
             # When a join unit is met, we stop here
             if(self.is_join_unit(subg,  local_graph_type)):
-                #print('current subgraph is a join unit.\n')
                 continue
             for subg_subg in self.enum_connected_subgraphs(subg):
                 subgraph_lhs = subg_subg
@@ -219,25 +215,16 @@ class PatternDec:
                     label_rhs = self.compute_canonical_label(subgraph_rhs)
                     if(self.subgraph_hash_table.has_key(label_rhs)): # Means subgraph_rhs is connected
                         label_lhs = self.compute_canonical_label(subgraph_lhs)
-                        #print('label_lhs: ', label_lhs)
-                        #print('label_rhs: ', label_rhs)
                         tmp_cost = self.subgraph_hash_table[label_lhs]['C'] + self.subgraph_hash_table[label_lhs]['T'] + \
                              self.subgraph_hash_table[label_rhs]['C'] + self.subgraph_hash_table[label_rhs]['T']
-                        #print('tmp_cost: ', tmp_cost)
-                        #print('cur_min_cost', self.subgraph_hash_table[subg_label]['C'])
                         if(self.subgraph_hash_table[subg_label]['C'] > tmp_cost):
-                            #print('Set as min cost\n')
                             self.subgraph_hash_table[subg_label]['C'] = tmp_cost
                             self.subgraph_hash_table[subg_label]['lhs'] = label_lhs
                             self.subgraph_hash_table[subg_label]['rhs'] = label_rhs
-                        #else:
-                            #print('Nothing changed\n')
     
     def print_opt_dec(self):
         cur_graph_label = self.compute_canonical_label(self.pattern_graph)
         print('Optimal cost:',  self.subgraph_hash_table[cur_graph_label]['C'])
-        #print(str(self.subgraph_hash_table['(1, 2)(1, 4)(2, 3)(2, 4)']))
-        #print(str(self.subgraph_hash_table['(1, 3)(1, 4)']))
         self.print_dec_subtree(cur_graph_label)
         
     def print_dec_subtree(self,  label):
@@ -426,13 +413,7 @@ if __name__ == '__main__':
     # number of patterns can be evaluated
     pat_dec.gen_deg_seq()
     pat_dec.cal_sum_of_power()
-    #print('num_vertices = ',  pat_dec.num_of_data_vertices)
-    #print('num_edges = ',  pat_dec.num_of_data_edges)
-    #graph_label = pat_dec.compute_canonical_label(g2)
-    #print('Optimal cost:', pat_dec.subgraph_hash_table[graph_label]['C'])
-    #print(str(pat_dec.subgraph_hash_table['(1, 2)(1, 4)(2, 3)(2, 4)']))
-    #print(str(pat_dec.subgraph_hash_table['(1, 3)(1, 4)']))
-    
+
     # 0: random graph model, 1: power-law graph model
     graph_model = 1  
     # 0: G_u^0;  1: G_u^1;  2: G_u^2, Look into section 6 in the paper
@@ -446,5 +427,3 @@ if __name__ == '__main__':
     g3.clear()
     g4.clear()
     g5.clear()
-    
-
