@@ -4,6 +4,10 @@ import sys
 import os
 import math
 
+# To run the pattern decomposition, please download graphgen from:
+# https://www-complexnetworks.lip6.fr/~latapy/FV/generation.html
+# It will generate the degree sequence of a random graph with power-law
+# distribution. We should configure the following gen_graph_dir if needed.
 class PatternDec:
     ''' Degree sequence'''
     deg_array = []
@@ -33,7 +37,9 @@ class PatternDec:
     merge_order = 10
     ''' Page size'''
     page_size = 4096
-    
+    '''The rootdir of the gengraph directory'''
+    gen_graph_dir = 'gengraph'
+
     def   __init__(self, _num_vertices, _avg_deg = 10,  _power_law_exp = 2.1,  _c_com = 3, _c_lm = 1,  _c_gm = 2,  _bs = 1024,  _order = 10,  _ps = 4096):
         self.num_of_data_vertices = _num_vertices
         self.avg_deg = _avg_deg
@@ -61,10 +67,9 @@ class PatternDec:
         self.pattern_graph = _g
         
     def gen_deg_seq(self):
-        gen_graph_dir = 'gengraph'
         min_deg = 1
         max_deg = int(math.sqrt(self.num_of_data_vertices * self.avg_deg))
-        cmd_deg = gen_graph_dir + "/bin/distrib " + str(self.num_of_data_vertices) + " " + str(self.power_law_exp) + " " + str(min_deg) + " " + \
+        cmd_deg = self.gen_graph_dir + "/bin/distrib " + str(self.num_of_data_vertices) + " " + str(self.power_law_exp) + " " + str(min_deg) + " " + \
                 str(max_deg) + " " + str(self.avg_deg)  + " > tmp"
         print(cmd_deg)
         os.system(cmd_deg)
