@@ -23,7 +23,7 @@ https://github.com/bloomreach/briefly
 Look into the following article to see how to compile a hadoop user code using Maven (not tested):
 http://tuttlem.github.io/2014/01/30/create-a-mapreduce-job-using-java-and-maven.html
 
-Or one can try to load the project into Eclipse and build the codes using hadoop eclupse plugin. 
+Or one can try to load the project into Eclipse and build the codes using hadoop eclipse plugin. 
 
 # How to run
 As we've mentioned, we use the briefly tools to run the program. It is fairely easy to use following the instructions:
